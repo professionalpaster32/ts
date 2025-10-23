@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tale Brawl - The Ultimate Cheat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+        :root {
+            --app-blue: 0, 150, 255;
+            --app-dark-blue: 10, 20, 40;
+        }
+
+        .brawl-title-tale {
+            font-family: 'Luckiest Guy', cursive;
+            color: #4b8dff;
+            text-shadow: 
+                -4px -4px 0 #000, 
+                4px -4px 0 #000, 
+                -4px 4px 0 #000, 
+                4px 4px 0 #000;
+        }
+
+        .brawl-title-brawl {
+            font-family: 'Luckiest Guy', cursive;
+            color: white;
+            text-shadow: 
+                -4px -4px 0 #000, 
+                4px -4px 0 #000, 
+                -4px 4px 0 #000, 
+                4px 4px 0 #000;
+        }
+
+        .glass-card {
+            background-color: rgba(10, 20, 40, 0.7);
+            border: 1px solid rgba(var(--app-blue), 0.5);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tag-exploit { 
+            color: #f87171;
+            box-shadow: 0 0 10px rgba(248, 113, 113, 0.7);
+            border: 1px solid rgba(248, 113, 113, 0.5);
+        }
+        .tag-visual { 
+            color: rgb(var(--app-blue));
+            box-shadow: 0 0 10px rgba(var(--app-blue), 0.7);
+            border: 1px solid rgba(var(--app-blue), 0.5);
+        }
+        .tag-half-exploit { 
+            color: #4ade80;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.7);
+            border: 1px solid rgba(74, 222, 128, 0.5);
+        }
+
+        .tilt-active {
+            transform: perspective(1000px) rotateX(var(--rX)) rotateY(var(--rY)) scale(1.05);
+            box-shadow: 0 10px 40px rgba(var(--app-blue), 0.5);
+        }
+
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: rgba(var(--app-blue), 0.6); border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: var(--app-dark-blue); }
+    </style>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'app-blue': `rgb(var(--app-blue))`,
+                        'app-dark': `rgb(var(--app-dark-blue))`
+                    },
+                    boxShadow: {
+                        'blue-glow': `0 0 25px rgba(var(--app-blue), 0.5)`,
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-app-dark text-white min-h-screen font-sans antialiased overflow-x-hidden flex flex-col">
+
+    <canvas id="particle-canvas"></canvas>
+
+    <main class="relative z-10 p-4 md:p-8 flex-grow">
+        
+        <div id="feature-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-app-dark/80 backdrop-blur-sm transition-opacity duration-300" onclick="closeModal()">
+            <div class="glass-card w-full max-w-lg p-6 rounded-2xl border-2 border-app-blue shadow-blue-glow animate-fadeIn" onclick="event.stopPropagation();">
+                <h3 id="modal-title" class="text-3xl font-extrabold text-app-blue mb-4"></h3>
+                <p id="modal-description" class="text-gray-300 leading-relaxed"></p>
+                <div class="mt-6 flex justify-end">
+                    <button onclick="closeModal()" class="px-6 py-2 bg-app-blue/20 text-app-blue font-bold rounded-xl hover:bg-app-blue/40 transition duration-200">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <section id="home-view" class="view-content container mx-auto fade-in-section">
+            <header class="text-center mb-12">
+                <img src="https://i.postimg.cc/Kjq90PmV/IMG-20251023-153958-261.jpg" alt="TS Logo" class="h-24 w-24 mx-auto mb-4 rounded-full shadow-blue-glow" onerror="this.onerror=null; this.src='https://placehold.co/96x96/0096FF/ffffff?text=LOGO'">
+                
+                <h1 class="text-6xl md:text-8xl font-extrabold mb-2 leading-none">
+                    <span id="tale-text" class="brawl-title-tale"></span>
+                    <span id="brawl-text" class="brawl-title-brawl"></span>
+                </h1>
+                
+                <p id="subtitle-text" class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mt-2"></p>
+            </header>
+
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 mb-16 w-fit mx-auto">
+                <a href="https://t.me/talebrawl" target="_blank" rel="noopener noreferrer" 
+                   class="flex items-center justify-center px-6 py-3 text-lg font-bold rounded-xl bg-app-blue text-app-dark border-2 border-app-blue transition duration-300 hover:shadow-blue-glow transform hover:scale-105">
+                    <i data-lucide="send" class="w-5 h-5 mr-2"></i>
+                    Telegram
+                </a>
+                <button onclick="switchView('features-view')" 
+                        class="glass-card flex items-center justify-center px-6 py-3 text-lg font-bold rounded-xl text-app-blue border-2 border-app-blue bg-transparent hover:bg-app-blue/10 transition duration-300 transform hover:scale-105">
+                    <i data-lucide="bolt" class="w-5 h-5 mr-2"></i>
+                    Features
+                </button>
+            </div>
+
+            <section class="mb-16">
+                <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <div class="glass-card rounded-2xl p-6 text-center tilt-card" data-tilt>
+                        <i data-lucide="rocket" class="w-10 h-10 mx-auto text-app-blue mb-4 transition-colors"></i>
+                        <h3 class="text-2xl font-bold mb-2 text-app-blue">Services</h3>
+                        <p class="text-lg text-gray-300">Fast & Trusted</p>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 text-center tilt-card" data-tilt>
+                        <i data-lucide="headphones" class="w-10 h-10 mx-auto text-app-blue mb-4 transition-colors"></i>
+                        <h3 class="text-2xl font-bold mb-2 text-app-blue">Support</h3>
+                        <p class="text-lg text-gray-300">24/7</p>
+                    </div>
+                    
+                    <div class="glass-card rounded-2xl p-6 text-center tilt-card" data-tilt>
+                        <i data-lucide="medal" class="w-10 h-10 mx-auto text-app-blue mb-4 transition-colors"></i>
+                        <h3 class="text-2xl font-bold mb-2 text-app-blue">Quality</h3>
+                        <p class="text-lg text-gray-300">10/10</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="max-w-3xl mx-auto mb-16">
+                <h2 class="text-4xl font-extrabold text-center text-app-blue mb-8">FAQs</h2>
+                
+                <div id="faq-accordion" class="space-y-4">
+                    <div class="glass-card rounded-2xl overflow-hidden shadow-xl border-app-blue/50">
+                        <button class="w-full text-left p-5 flex justify-between items-center text-xl font-semibold hover:bg-app-blue/10 transition duration-200 text-app-blue" data-faq-toggle>
+                            Is There a Ban Risk using it?
+                            <i data-lucide="chevron-down" class="w-6 h-6 transition-transform duration-300"></i>
+                        </button>
+                        <div class="faq-content h-0 overflow-hidden transition-[height] duration-300 ease-out">
+                            <p class="p-5 pt-0 text-gray-300 leading-relaxed">
+                                No, There's No Ban Risk. Our Mod is designed to operate seamlessly within the game's protocols, minimizing detection and ensuring a safe experience.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl overflow-hidden shadow-xl border-app-blue/50">
+                        <button class="w-full text-left p-5 flex justify-between items-center text-xl font-semibold hover:bg-app-blue/10 transition duration-200 text-app-blue" data-faq-toggle>
+                            Is This a Malware?
+                            <i data-lucide="chevron-down" class="w-6 h-6 transition-transform duration-300"></i>
+                        </button>
+                        <div class="faq-content h-0 overflow-hidden transition-[height] duration-300 ease-out">
+                            <p class="p-5 pt-0 text-gray-300 leading-relaxed">
+                                No, this is not malware. We prioritize user security and privacy. All files are meticulously scanned and verified to ensure they are clean and safe for download and use.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl overflow-hidden shadow-xl border-app-blue/50">
+                        <button class="w-full text-left p-5 flex justify-between items-center text-xl font-semibold hover:bg-app-blue/10 transition duration-200 text-app-blue" data-faq-toggle>
+                            How to Get Started?
+                            <i data-lucide="chevron-down" class="w-6 h-6 transition-transform duration-300"></i>
+                        </button>
+                        <div class="faq-content h-0 overflow-hidden transition-[height] duration-300 ease-out">
+                            <p class="p-5 pt-0 text-gray-300 leading-relaxed">
+                                Join the **Telegram Channel** for instant access, more news, updates, and community support!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <section id="features-view" class="view-content container mx-auto hidden fade-in-section">
+            <div class="flex items-center mb-8">
+                <button onclick="switchView('home-view')" class="glass-card p-3 rounded-full text-app-blue hover:bg-app-blue/10 transition duration-200 mr-4">
+                    <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                </button>
+                <h2 class="text-4xl font-extrabold text-app-blue">Tale Stars Features</h2>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+
+            <div class="text-center mt-16 p-4">
+                <a href="https://t.me/talestarsfeatures/39" target="_blank" rel="noopener noreferrer" 
+                   class="inline-flex items-center px-6 py-3 text-lg font-bold rounded-xl bg-app-blue/20 text-app-blue border-2 border-app-blue hover:bg-app-blue/40 transition duration-300 transform hover:scale-105 shadow-blue-glow">
+                    <i data-lucide="video" class="w-5 h-5 mr-2"></i>
+                    Watch Feature Preview Video
+                </a>
+                <p class="text-sm text-gray-500 mt-2">Redirects to Telegram.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="relative z-10 text-center text-gray-500 p-6 mt-8">
+        <p>&copy; 2025 All rights reserved.</p>
+        <p class="mt-2">Join us on <a href="https://t.me/talebrawl" target="_blank" rel="noopener noreferrer" class="text-app-blue hover:underline">Telegram</a></p>
+    </footer>
+
+    <script>
+        const featureData = [
+            { title: "Auto Dodge", tag: "EXPLOIT", description: "Automatically dodges incoming enemy bullets, significantly increasing your brawler's survivability in intense skirmishes." },
+            { title: "Aim Bot", tag: "EXPLOIT", description: "Auto aims at enemies with advanced predictive targeting, giving you an 85% chance of connecting with your bullets on a target." },
+            { title: "Auto Charge", tag: "EXPLOIT", description: "Automatically charges the variable-range attacks of brawlers like Janet, Hank, and Angelo to their maximum range for optimal damage output." },
+            { title: "X-Ray Autoshoot", tag: "EXPLOIT", description: "When you autoshoot while an enemy player is visible, your brawler will automatically target and attack that player through walls or obstacles. The attacks will continue to track that player as they move, until you switch targets." },
+            { title: "Optimize Game", tag: "VISUAL", description: "Allows you to fine-tune in-game settings for overall better performance, resulting in smoother frame rates and reduced input lag." },
+            { title: "Chromatic Name", tag: "VISUAL", description: "Changes your in-game name to display with a chromatic, shifting color effect, similar to having an active Brawl Pass." },
+            { title: "Unlock All Emotes", tag: "VISUAL", description: "Unlocks all matcherino winner and world finals pins (Only visible to you, works in battle) and all skin pins (Visible to everyone, only works in team chat and club chat)." },
+            { title: "Ranked Mod", tag: "HALF-EXPLOIT", description: "Allows you to play any power level brawler (1-11) in Ranked mode, bypassing the standard Power Level 9 requirement." },
+            { title: "Nani Ulti Mod", tag: "HALF-EXPLOIT", description: "Allows you to manually move Nani's brawler body instead of controlling the Peep drone while using her Super." },
+            { title: "Old Rank System", tag: "VISUAL", description: "Changes the visual display of the current ranking system tiers 1-50 back to the classic Rank 1-35 system." },
+            { title: "Theme Changer", tag: "VISUAL", description: "Allows you change the main menu theme and loading screen to an older, classic theme from previous seasons." },
+            { title: "Skin Changer", tag: "VISUAL", description: "Allows you to instantly change the skin of any brawler to any existing skin in the game's files." },
+            { title: "Spectators Menu", tag: "VISUAL", description: "Allows you to fake having 1 to 1,000,000 normal or Brawl TV spectators watching your match." },
+            { title: "Anti Auto Super", tag: "EXPLOIT", description: "Disables the automatic Super charging/firing mechanic, requiring manual aim to use your Super for precise shots." },
+            { title: "Hide Ulti Aiming", tag: "EXPLOIT", description: "Hides your Super aiming indicator, preventing opponents from seeing when and where you are planning to deploy your Super." },
+            { title: "Empty Pin", tag: "HALF-EXPLOIT", description: "When you send the 5th pin in a match, it sends a blank, invisible pin instead of a standard emoji." },
+            { title: "Battle Card Mod", tag: "VISUAL", description: "Changes your Battle Card display to show the prestigious Old Master or Pro Rank badge." },
+            { title: "Auto Play Again", tag: "EXPLOIT", description: "Automatically clicks the 'Play Again' button after a match ends, speeding up the grinding process." },
+            { title: "See Selected Brawlers", tag: "HALF-EXPLOIT", description: "Grants the ability to see opponent's brawlers in friendly matches before the match begins." },
+            { title: "Status Changer", tag: "VISUAL", description: "Lets you fake your status while in a team (e.g., show 'in battle,' 'offline,' 'creating map,' etc.)." },
+            { title: "Anti Autoshoot", tag: "EXPLOIT", description: "Disables the automatic basic attack mechanic, requiring manual aim to attack for maximum precision." },
+            { title: "Map Maker Mod", tag: "HALF-EXPLOIT", description: "Unlocks hidden items and components you can place in your custom Map Maker maps." },
+            { title: "Spectate With ID", tag: "EXPLOIT", description: "Allows you to spectate players directly by entering their player tag (e.g., #2PP...) in the Spectate menu." },
+            { title: "Hide Battle State", tag: "EXPLOIT", description: "Hides your battle state when in a match, meaning your friends cannot spectate you in real-time." },
+            { title: "Random Spray Spam", tag: "VISUAL", description: "Automatically sprays emotes in random directions around your brawler throughout the match." },
+            { title: "Chat Spam", tag: "EXPLOIT", description: "Flood the team/club chat by automatically spamming a pre-set message at a high frequency." },
+            { title: "Decreased Cooldown", tag: "EXPLOIT", description: "Reduces server latency and packet loss, effectively decreasing ping during matches for a smoother experience." },
+            { title: "Anti AFK", tag: "EXPLOIT", description: "Disables the AFK kick mechanism, allowing you to stay idle for as long as you want without being removed from the match." },
+            { title: "Remove Black Borders", tag: "VISUAL", description: "Removes the black borders that appear around the screen during matches." },
+            { title: "Invite By ID", tag: "HALF-EXPLOIT", description: "Lets you invite friends to friendly matches by their tag even if you’re not the team leader." },
+            { title: "Font Changer", tag: "VISUAL", description: "Changes the in-game font to custom fonts of your choosing." },
+            { title: "Willow Mod", tag: "EXPLOIT", description: "NEW FEATURE: When you control an enemy brawler using Willow's Super, it allows you to use the controlled person's Super ability for yourself/your team." },
+        ];
+
+        let canvas, ctx, particles = [];
+        const particleCount = 100;
+
+        function initParticles() {
+            canvas = document.getElementById('particle-canvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 0.5 - 0.25;
+                this.speedY = Math.random() * 0.5 - 0.25;
+                this.color = `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--app-blue')}, ${Math.random() * 0.5 + 0.1})`;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 80) {
+                        ctx.strokeStyle = `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--app-blue')}, ${1 - (distance / 80)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+
+        function typeWriterSimple(elementId, textToType, speed, callback) {
+            const element = document.getElementById(elementId);
+            let i = 0;
+            
+            function typing() {
+                if (i < textToType.length) {
+                    element.textContent += textToType.charAt(i);
+                    i++;
+                    setTimeout(typing, speed);
+                } else {
+                    if (callback) callback();
+                }
+            }
+            typing();
+        }
+
+        function startComplexSubtitleAnimation() {
+            const subtitleElement = document.getElementById('subtitle-text');
+            const baseText = 'The Next-Level Brawl Stars Official ';
+            const cycleWords = ['Mod', 'Cheat', 'Exploit', 'Mod']; 
+            let state = 'INITIAL_TYPING';
+            let cycleStep = 0; 
+            let i = 0;
+
+            function animate() {
+                switch (state) {
+                    case 'INITIAL_TYPING':
+                        const initialFullText = baseText + cycleWords[0];
+                        if (subtitleElement.textContent.length < initialFullText.length) {
+                            subtitleElement.textContent += initialFullText.charAt(i);
+                            i++;
+                            setTimeout(animate, 50);
+                        } else {
+                            state = 'CYCLING_DELETING';
+                            i = cycleWords[0].length;
+                            setTimeout(animate, 1500);
+                        }
+                        break;
+
+                    case 'CYCLING_DELETING':
+                        if (i > 0) {
+                            subtitleElement.textContent = subtitleElement.textContent.slice(0, -1);
+                            i--;
+                            setTimeout(animate, 30);
+                        } else {
+                            cycleStep++;
+                            if (cycleStep >= cycleWords.length) {
+                                state = 'DONE';
+                                return; 
+                            }
+                            state = 'CYCLING_TYPING';
+                            i = 0;
+                            setTimeout(animate, 500);
+                        }
+                        break;
+
+                    case 'CYCLING_TYPING':
+                        const currentWord = cycleWords[cycleStep];
+                        if (i < currentWord.length) {
+                            subtitleElement.textContent += currentWord.charAt(i);
+                            i++;
+                            setTimeout(animate, 80);
+                        } else {
+                            if (cycleStep < cycleWords.length - 1) {
+                                state = 'CYCLING_DELETING';
+                                setTimeout(animate, 1500);
+                            } else {
+                                state = 'DONE';
+                            }
+                        }
+                        break;
+                    
+                    case 'DONE':
+                        return;
+                }
+            }
+
+            animate();
+        }
+
+        function startTypingAnimation() {
+            document.getElementById('tale-text').textContent = '';
+            document.getElementById('brawl-text').textContent = '';
+            document.getElementById('subtitle-text').textContent = '';
+            
+            typeWriterSimple('tale-text', 'Tale', 100, () => {
+                typeWriterSimple('brawl-text', ' Brawl', 100, () => {
+                    startComplexSubtitleAnimation();
+                });
+            });
+        }
+
+        function switchView(targetId) {
+            const views = document.querySelectorAll('.view-content');
+            views.forEach(view => {
+                const isTarget = view.id === targetId;
+                view.classList.toggle('hidden', !isTarget);
+                
+                if (isTarget) {
+                    view.classList.add('animate-fadeIn');
+                } else {
+                    view.classList.remove('animate-fadeIn');
+                }
+            });
+            lucide.createIcons();
+            window.scrollTo(0, 0);
+        }
+
+        function setupFaqAccordion() {
+            document.querySelectorAll('[data-faq-toggle]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const content = button.nextElementSibling;
+                    const icon = button.querySelector('i');
+                    const isOpen = content.classList.contains('active');
+
+                    document.querySelectorAll('.faq-content.active').forEach(openContent => {
+                        openContent.style.height = '0';
+                        openContent.classList.remove('active');
+                        openContent.previousElementSibling.querySelector('i').style.transform = 'rotate(0deg)';
+                    });
+
+                    if (!isOpen) {
+                        content.style.height = content.scrollHeight + 'px';
+                        content.classList.add('active');
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+        }
+        
+        function renderFeatureCards() {
+            const container = document.querySelector('#features-view .grid');
+            container.innerHTML = featureData.map(feature => {
+                let tagClass = '';
+                if (feature.tag === 'EXPLOIT') tagClass = 'tag-exploit';
+                else if (feature.tag === 'VISUAL') tagClass = 'tag-visual';
+                else if (feature.tag === 'HALF-EXPLOIT') tagClass = 'tag-half-exploit';
+
+                return `
+                    <div class="glass-card rounded-2xl p-6 shadow-xl border-app-blue/50 cursor-pointer transition duration-300 transform hover:scale-[1.02] feature-card" 
+                         onclick="openModal('${feature.title}', '${feature.description}')">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="text-xl font-bold text-app-blue">${feature.title}</h4>
+                            <span class="text-xs font-semibold px-3 py-1 rounded-full ${tagClass} transform hover:scale-105">
+                                ${feature.tag}
+                            </span>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-2 line-clamp-2">${feature.description}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openModal(title, description) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-description').textContent = description;
+            const modal = document.getElementById('feature-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            modal.classList.remove('animate-fadeOut');
+            modal.classList.add('animate-fadeIn');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('feature-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            modal.classList.remove('animate-fadeIn');
+        }
+
+        function setupTilt() {
+            const cards = document.querySelectorAll('.tilt-card');
+            cards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+
+                    const maxTilt = 5;
+                    const rY = (x - centerX) / centerX * maxTilt * -1;
+                    const rX = (y - centerY) / centerY * maxTilt;
+
+                    card.style.setProperty('--rX', `${rX}deg`);
+                    card.style.setProperty('--rY', `${rY}deg`);
+                    card.classList.add('tilt-active');
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.classList.remove('tilt-active');
+                    card.style.setProperty('--rX', '0deg');
+                    card.style.setProperty('--rY', '0deg');
+                });
+            });
+        }
+
+        window.onload = function() {
+            window.addEventListener('resize', resizeCanvas);
+            
+            initParticles();
+            animateParticles();
+            setupFaqAccordion();
+            renderFeatureCards();
+            setupTilt();
+            startTypingAnimation();
+            lucide.createIcons();
+        };
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .animate-fadeIn {
+                animation: fadeIn 0.5s ease-out forwards;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
