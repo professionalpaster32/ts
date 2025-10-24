@@ -223,12 +223,12 @@
 
     <main class="relative z-10 p-4 md:p-8 flex-grow">
         
-        <div id="feature-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-app-dark/80 backdrop-blur-sm" onclick="closeFeatureModal()">
+        <div id="feature-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-app-dark/80 backdrop-blur-sm" onclick="closemd()">
             <div class="glass-card w-full max-w-lg p-6 rounded-2xl border-2 border-app-blue shadow-blue-glow animate-fadeIn" onclick="event.stopPropagation();">
                 <h3 id="modal-title" class="text-3xl font-extrabold text-app-blue mb-4"></h3>
                 <p id="modal-description" class="text-gray-300 leading-relaxed"></p>
                 <div class="mt-6 flex justify-end">
-                    <button onclick="closeFeatureModal()" class="px-6 py-2 bg-app-blue/20 text-app-blue font-bold rounded-xl hover:bg-app-blue/40 transition duration-200">
+                    <button onclick="closemd()" class="px-6 py-2 bg-app-blue/20 text-app-blue font-bold rounded-xl hover:bg-app-blue/40 transition duration-200">
                         Close
                     </button>
                 </div>
@@ -317,7 +317,7 @@
                         </button>
                         <div class="faq-content h-0 overflow-hidden transition-[height] duration-300 ease-out">
                             <p class="p-5 pt-0 text-gray-300 leading-relaxed">
-                                Join the Telegram Channel for more news and updates
+                                Join the Telegram Channel for more news and updates.
                             </p>
                         </div>
                     </div>
@@ -342,7 +342,7 @@
                     <i data-lucide="video" class="w-5 h-5 mr-2"></i>
                     Watch Feature Preview Video
                 </a>
-                <p class="text-sm text-gray-500 mt-2">Redirects to Telegram</p>
+                <p class="text-sm text-gray-500 mt-2">Redirects to Telegram.</p>
             </div>
         </section>
 
@@ -462,81 +462,81 @@
             { title: "Willow Mod", tag: "EXPLOIT", description: "NEW FEATURE: When you control an enemy brawler using Willow's Super, it allows you to use the controlled person's Super ability for yourself/your team." },
         ];
 
-        let particleCanvas, particleCtx, particles = [];
+        let particlecnv, particlectx, partcls = [];
         const PARTICLE_COUNT = 100;
 
-        let sidebarNav, sidebarOverlay, hamburgerButton, modalElement, modalTitle, modalDescription;
+        let sbarnav, sbarovrly, hmbgrbtn, modalel, modaltitle, modaldesc;
 
-        function handleRouting() {
+        function hashrouter() {
             const hash = window.location.hash || '#/';
-            let targetViewId;
+            let targetviewid;
             
             if (hash === '#/') {
-                targetViewId = 'home-view';
+                targetviewid = 'home-view';
             } else if (hash.startsWith('#/features')) {
-                targetViewId = 'features-view';
-            } else if (hash === '#/royale') {
-                targetViewId = 'royale-view';
+                targetviewid = 'features-view';
+            } else if (hash === '#/taleroyale') {
+                targetviewid = 'royale-view';
             } else {
-                targetViewId = 'home-view';
+                targetviewid = 'home-view';
             }
             
-            switchView(targetViewId);
+            viewswitch(targetviewid);
         }
 
         window.onload = function() {
-            sidebarNav = document.getElementById('sidebar-nav');
-            sidebarOverlay = document.getElementById('sidebar-overlay');
-            hamburgerButton = document.getElementById('hamburger-menu-button');
-            modalElement = document.getElementById('feature-modal');
-            modalTitle = document.getElementById('modal-title');
-            modalDescription = document.getElementById('modal-description');
+            sbarnav = document.getElementById('sidebar-nav');
+            sbarovrly = document.getElementById('sidebar-overlay');
+            hmbgrbtn = document.getElementById('hamburger-menu-button');
+            modalel = document.getElementById('feature-modal');
+            modaltitle = document.getElementById('modal-title');
+            modaldesc = document.getElementById('modal-description');
 
-            initParticleSystem();
-            initFAQAccordion();
-            initCardTilting();
-            initSidebarControls();
+            initparticlesys();
+            faqaccord();
+            cardtilt();
+            sidebarctrls();
             
-            renderFeaturesList();
-            startTitleAnimation();
+            listfeatures();
+            startitleanim();
             
             lucide.createIcons();
             
-            window.addEventListener('hashchange', handleRouting);
-            handleRouting();
-            window.addEventListener('resize', handleCanvasResize);
+            window.addEventListener('hashchange', hashrouter);
+            hashrouter();
+            window.addEventListener('resize', canvresize);
         };
 
-        function initSidebarControls() {
-            hamburgerButton.addEventListener('click', openSidebar);
-            sidebarOverlay.addEventListener('click', closeSidebar);
+        function sidebarctrls() {
+            hmbgrbtn.addEventListener('click', openside);
+            sbarovrly.addEventListener('click', closeside);
             
             document.querySelectorAll('.sidebar-link').forEach(link => {
                 link.addEventListener('click', () => {
-                    closeSidebar();
+                    closeside();
                 });
             });
         }
 
-        function initParticleSystem() {
-            particleCanvas = document.getElementById('particle-canvas');
-            particleCtx = particleCanvas.getContext('2d');
-            handleCanvasResize();
+        function initparticlesys() {
+            particlecnv = document.getElementById('particle-canvas');
+            particlectx = particlecnv.getContext('2d');
+            canvresize();
 
-            particles = [];
+            partcls = [];
             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                particles.push(new Particle());
+                partcls.push(new particle());
             }
             
-            animateParticles();
+            particleloop();
         }
 
-        function initFAQAccordion() {
+        function faqaccord() {
             document.querySelectorAll('[data-faq-toggle]').forEach(button => {
                 button.addEventListener('click', () => {
                     const content = button.nextElementSibling;
                     const icon = button.querySelector('i');
-                    const is_open = content.classList.contains('active');
+                    const isopen = content.classList.contains('active');
 
                     document.querySelectorAll('.faq-content.active').forEach(openContent => {
                         if (openContent !== content) {
@@ -546,7 +546,7 @@
                         }
                     });
 
-                    if (!is_open) {
+                    if (!isopen) {
                         content.style.height = content.scrollHeight + 'px';
                         content.classList.add('active');
                         icon.style.transform = 'rotate(180deg)';
@@ -559,22 +559,22 @@
             });
         }
         
-        function initCardTilting() {
+        function cardtilt() {
             const cards = document.querySelectorAll('.tilt-card');
             cards.forEach(card => {
                 card.addEventListener('mousemove', (e) => {
                     const rect = card.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
+                    const centerx = rect.width / 2;
+                    const centery = rect.height / 2;
 
-                    const maxTilt = 5;
-                    const rotateY = (x - centerX) / centerX * maxTilt * -1;
-                    const rotateX = (y - centerY) / centerY * maxTilt;
+                    const maxtilt = 5;
+                    const rotatey = (x - centerx) / centerx * maxtilt * -1;
+                    const rotatex = (y - centery) / centery * maxtilt;
 
-                    card.style.setProperty('--rX', `${rotateX}deg`);
-                    card.style.setProperty('--rY', `${rotateY}deg`);
+                    card.style.setProperty('--rX', `${rotatex}deg`);
+                    card.style.setProperty('--rY', `${rotatey}deg`);
                     card.classList.add('tilt-active');
                 });
 
@@ -586,28 +586,28 @@
             });
         }
 
-        function openSidebar() {
-            sidebarNav.classList.remove('-translate-x-full');
-            sidebarOverlay.classList.remove('hidden');
+        function openside() {
+            sbarnav.classList.remove('-translate-x-full');
+            sbarovrly.classList.remove('hidden');
             lucide.createIcons();
         }
 
-        function closeSidebar() {
-            sidebarNav.classList.add('-translate-x-full');
-            sidebarOverlay.classList.add('hidden');
+        function closeside() {
+            sbarnav.classList.add('-translate-x-full');
+            sbarovrly.classList.add('hidden');
         }
 
-        function switchView(targetViewId) {
-            const isRoyale = targetViewId === 'royale-view';
-            document.body.classList.toggle('theme-royale', isRoyale);
+        function viewswitch(targetviewid) {
+            const isroyale = targetviewid === 'royale-view';
+            document.body.classList.toggle('theme-royale', isroyale);
             
-            particles.forEach(p => p.setTheme(isRoyale));
+            partcls.forEach(p => p.settheme(isroyale));
 
             document.querySelectorAll('.view-content').forEach(view => {
-                const isTarget = (view.id === targetViewId);
-                view.classList.toggle('hidden', !isTarget);
+                const istarget = (view.id === targetviewid);
+                view.classList.toggle('hidden', !istarget);
                 
-                if (isTarget) {
+                if (istarget) {
                     view.classList.add('animate-fadeIn');
                 } else {
                     view.classList.remove('animate-fadeIn');
@@ -618,37 +618,37 @@
             window.scrollTo(0, 0);
         }
 
-        function showFeatureModal(title, description) {
-            modalTitle.textContent = title;
-            modalDescription.textContent = description;
+        function showmd(title, description) {
+            modaltitle.textContent = title;
+            modaldesc.textContent = description;
             
-            modalElement.classList.remove('hidden');
-            modalElement.classList.add('flex');
-            modalElement.classList.add('animate-fadeIn');
+            modalel.classList.remove('hidden');
+            modalel.classList.add('flex');
+            modalel.classList.add('animate-fadeIn');
         }
 
-        function closeFeatureModal() {
-            modalElement.classList.add('hidden');
-            modalElement.classList.remove('flex');
-            modalElement.classList.remove('animate-fadeIn');
+        function closemd() {
+            modalel.classList.add('hidden');
+            modalel.classList.remove('flex');
+            modalel.classList.remove('animate-fadeIn');
         }
 
-        function renderFeaturesList() {
+        function listfeatures() {
             const container = document.getElementById('features-grid');
             if (!container) return;
 
             container.innerHTML = FEATURE_DATA.map(feature => {
-                let tagClass = '';
-                if (feature.tag === 'EXPLOIT') tagClass = 'tag-exploit';
-                else if (feature.tag === 'VISUAL') tagClass = 'tag-visual';
-                else if (feature.tag === 'HALF-EXPLOIT') tagClass = 'tag-half-exploit';
+                let tagclass = '';
+                if (feature.tag === 'EXPLOIT') tagclass = 'tag-exploit';
+                else if (feature.tag === 'VISUAL') tagclass = 'tag-visual';
+                else if (feature.tag === 'HALF-EXPLOIT') tagclass = 'tag-half-exploit';
 
                 return `
                     <div class="glass-card rounded-2xl p-6 shadow-xl border-app-blue/50 cursor-pointer transition duration-300 transform hover:scale-[1.02] feature-card" 
-                         onclick="showFeatureModal('${feature.title}', '${feature.description.replace(/'/g, "\\'")}')">
+                         onclick="showmd('${feature.title}', '${feature.description.replace(/'/g, "\\'")}')">
                         <div class="flex justify-between items-start mb-3">
                             <h4 class="text-xl font-bold text-app-blue">${feature.title}</h4>
-                            <span class="text-xs font-semibold px-3 py-1 rounded-full ${tagClass} transform hover:scale-105">
+                            <span class="text-xs font-semibold px-3 py-1 rounded-full ${tagclass} transform hover:scale-105">
                                 ${feature.tag}
                             </span>
                         </div>
@@ -658,20 +658,20 @@
             }).join('');
         }
 
-        function startTitleAnimation() {
+        function startitleanim() {
             document.getElementById('title-tale-text').textContent = '';
             document.getElementById('title-brawl-text').textContent = '';
             document.getElementById('subtitle-text').textContent = '';
             
-            typewriterEffect('title-tale-text', 'Tale', 100, () => {
-                typewriterEffect('title-brawl-text', ' Brawl', 100, () => {
-                    startSubtitleAnimation();
+            typer('title-tale-text', 'Tale', 100, () => {
+                typer('title-brawl-text', ' Brawl', 100, () => {
+                    startsubanim();
                 });
             });
         }
 
-        function typewriterEffect(elementId, text, speed, callback) {
-            const element = document.getElementById(elementId);
+        function typer(elementid, text, speed, callback) {
+            const element = document.getElementById(elementid);
             if (!element) return;
             let i = 0;
             
@@ -687,58 +687,58 @@
             typing();
         }
 
-        function startSubtitleAnimation() {
-            const subtitleElement = document.getElementById('subtitle-text');
-            if (!subtitleElement) return;
-            const baseText = 'The Next-Level Brawl Stars Official ';
+        function startsubanim() {
+            const subtitleel = document.getElementById('subtitle-text');
+            if (!subtitleel) return;
+            const basetxt = 'The Next-Level Brawl Stars Official ';
             const words = ['Mod', 'Cheat', 'Exploit', 'Mod']; 
             
             let state = 'INITIAL_TYPING';
-            let wordIndex = 0; 
-            let charIndex = 0;
+            let wordidx = 0; 
+            let charidx = 0;
 
-            function animate() {
+            function anim() {
                 switch (state) {
                     case 'INITIAL_TYPING':
-                        const initialFullText = baseText + words[0];
-                        if (charIndex < initialFullText.length) {
-                            subtitleElement.textContent = initialFullText.substring(0, charIndex + 1);
-                            charIndex++;
-                            setTimeout(animate, 50);
+                        const initialfulltxt = basetxt + words[0];
+                        if (charidx < initialfulltxt.length) {
+                            subtitleel.textContent = initialfulltxt.substring(0, charidx + 1);
+                            charidx++;
+                            setTimeout(anim, 50);
                         } else {
                             state = 'DELETING';
-                            charIndex = words[0].length;
-                            setTimeout(animate, 1500);
+                            charidx = words[0].length;
+                            setTimeout(anim, 1500);
                         }
                         break;
 
                     case 'DELETING':
-                        if (charIndex > 0) {
-                            subtitleElement.textContent = baseText + words[wordIndex].substring(0, charIndex - 1);
-                            charIndex--;
-                            setTimeout(animate, 30);
+                        if (charidx > 0) {
+                            subtitleel.textContent = basetxt + words[wordidx].substring(0, charidx - 1);
+                            charidx--;
+                            setTimeout(anim, 30);
                         } else {
-                            wordIndex++;
-                            if (wordIndex >= words.length) {
+                            wordidx++;
+                            if (wordidx >= words.length) {
                                 state = 'DONE';
                                 return; 
                             }
                             state = 'TYPING';
-                            charIndex = 0;
-                            setTimeout(animate, 500);
+                            charidx = 0;
+                            setTimeout(anim, 500);
                         }
                         break;
 
                     case 'TYPING':
-                        const currentWord = words[wordIndex];
-                        if (charIndex < currentWord.length) {
-                            subtitleElement.textContent = baseText + currentWord.substring(0, charIndex + 1);
-                            charIndex++;
-                            setTimeout(animate, 80);
+                        const currentword = words[wordidx];
+                        if (charidx < currentword.length) {
+                            subtitleel.textContent = basetxt + currentword.substring(0, charidx + 1);
+                            charidx++;
+                            setTimeout(anim, 80);
                         } else {
-                            if (wordIndex < words.length - 1) {
+                            if (wordidx < words.length - 1) {
                                 state = 'DELETING';
-                                setTimeout(animate, 1500);
+                                setTimeout(anim, 1500);
                             } else {
                                 state = 'DONE';
                             }
@@ -749,23 +749,23 @@
                         return;
                 }
             }
-            animate();
+            anim();
         }
 
-        class Particle {
+        class particle {
             constructor() {
                 this.x = Math.random() * window.innerWidth;
                 this.y = Math.random() * window.innerHeight;
                 this.size = Math.random() * 2 + 1;
                 this.speedX = Math.random() * 0.5 - 0.25;
                 this.speedY = Math.random() * 0.5 - 0.25;
-                this.setTheme(document.body.classList.contains('theme-royale'));
+                this.settheme(document.body.classList.contains('theme-royale'));
             }
 
-            setTheme(isRoyale) {
-                const colorVar = isRoyale ? '--royale-purple' : '--app-blue';
-                const colorRgb = getComputedStyle(document.documentElement).getPropertyValue(colorVar);
-                this.color = `rgba(${colorRgb}, ${Math.random() * 0.5 + 0.1})`;
+            settheme(isroyale) {
+                const colorvar = isroyale ? '--royale-purple' : '--app-blue';
+                const colorrgb = getComputedStyle(document.documentElement).getPropertyValue(colorvar);
+                this.color = `rgba(${colorrgb}, ${Math.random() * 0.5 + 0.1})`;
             }
 
             update() {
@@ -784,47 +784,47 @@
             }
         }
 
-        function handleCanvasResize() {
+        function canvresize() {
             const dpr = window.devicePixelRatio || 1;
             
-            particleCanvas.width = window.innerWidth * dpr;
-            particleCanvas.height = window.innerHeight * dpr;
+            particlecnv.width = window.innerWidth * dpr;
+            particlecnv.height = window.innerHeight * dpr;
             
-            particleCanvas.style.width = window.innerWidth + 'px';
-            particleCanvas.style.height = window.innerHeight + 'px';
+            particlecnv.style.width = window.innerWidth + 'px';
+            particlecnv.style.height = window.innerHeight + 'px';
             
-            particleCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            particlectx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        function animateParticles() {
-            particleCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        function particleloop() {
+            particlectx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
-            const isRoyale = document.body.classList.contains('theme-royale');
-            const lineVar = isRoyale ? '--royale-gold' : '--app-blue';
-            const lineRgb = getComputedStyle(document.documentElement).getPropertyValue(lineVar);
+            const isroyale = document.body.classList.contains('theme-royale');
+            const linevar = isroyale ? '--royale-gold' : '--app-blue';
+            const linergb = getComputedStyle(document.documentElement).getPropertyValue(linevar);
 
 
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw(particleCtx);
+            for (let i = 0; i < partcls.length; i++) {
+                partcls[i].update();
+                partcls[i].draw(particlectx);
                 
-                for (let j = i; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
+                for (let j = i; j < partcls.length; j++) {
+                    const dx = partcls[i].x - partcls[j].x;
+                    const dy = partcls[i].y - partcls[j].y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
                     if (distance < 80) {
-                        particleCtx.strokeStyle = `rgba(${lineRgb}, ${1 - (distance / 80)})`;
-                        particleCtx.lineWidth = 0.5;
-                        particleCtx.beginPath();
-                        particleCtx.moveTo(particles[i].x, particles[i].y);
-                        particleCtx.lineTo(particles[j].x, particles[j].y);
-                        particleCtx.stroke();
+                        particlectx.strokeStyle = `rgba(${linergb}, ${1 - (distance / 80)})`;
+                        particlectx.lineWidth = 0.5;
+                        particlectx.beginPath();
+                        particlectx.moveTo(partcls[i].x, partcls[i].y);
+                        particlectx.lineTo(partcls[j].x, partcls[j].y);
+                        particlectx.stroke();
                     }
                 }
             }
             
-            requestAnimationFrame(animateParticles);
+            requestAnimationFrame(particleloop);
         }
 
     </script>
