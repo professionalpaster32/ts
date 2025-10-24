@@ -25,10 +25,10 @@
         :root {
             --app-blue: 0, 150, 255;
             --app-dark-blue: 10, 20, 40;
-            --royale-purple: 147, 51, 234; /* Base purple */
+            --royale-purple: 147, 51, 234;
             --royale-gold: 252, 211, 77;
-            --royale-dark-purple: 90, 30, 140; /* Deeper purple for shadows/3D effect */
-            --hamburger-dark-purple-bg: 40, 0, 80; /* Darker, desaturated purple for bg */
+            --royale-dark-purple: 90, 30, 140;
+            --hamburger-dark-purple-bg: 40, 0, 80;
         }
 
         .brawl-title-tale, .brawl-title-brawl {
@@ -126,37 +126,35 @@
         .royale-title-tale {
             color: white;
             text-shadow: 
-                -3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
-                3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
-                -3px 3px 0 rgba(var(--royale-dark-purple), 0.8), 
-                3px 3px 0 rgba(var(--royale-dark-purple), 0.8),
-                -6px 6px 0 rgba(var(--royale-dark-purple), 0.6),
-                -9px 9px 0 rgba(var(--royale-dark-purple), 0.4);
+                -3px -3px 0 #000, 
+                3px -3px 0 #000, 
+                -3px 3px 0 #000, 
+                3px 3px 0 #000,
+                -6px 6px 0 #000,
+                -9px 9px 0 #000;
         }
 
         .royale-title-royale {
-            color: rgb(var(--royale-gold)); /* Changed to gold */
+            color: rgb(var(--royale-gold));
             text-shadow: 
-                -3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
-                3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
-                -3px 3px 0 rgba(var(--royale-dark-purple), 0.8), 
-                3px 3px 0 rgba(var(--royale-dark-purple), 0.8),
-                -6px 6px 0 rgba(var(--royale-dark-purple), 0.6),
-                -9px 9px 0 rgba(var(--royale-dark-purple), 0.4);
+                -3px -3px 0 #000, 
+                3px -3px 0 #000, 
+                -3px 3px 0 #000, 
+                3px 3px 0 #000,
+                -6px 6px 0 #000,
+                -9px 9px 0 #000;
         }
 
         .royale-glass-card {
-            /* Removed border, updated background color */
             background-color: rgba(var(--royale-dark-purple), 0.2); 
-            border: none; /* Removed border */
+            border: none;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(10px);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        /* New: Soft text effect for content inside royale-glass-card */
         .royale-glass-card h3, .royale-glass-card h4, .royale-glass-card h5, .royale-glass-card p, .royale-glass-card strong {
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); /* Soft white glow/shadow */
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
 
 
@@ -168,7 +166,7 @@
             color: rgb(var(--royale-purple));
             border-color: rgba(var(--royale-purple), 0.5);
             box-shadow: 0 0 15px rgba(var(--royale-purple), 0.5);
-            background-color: rgb(var(--hamburger-dark-purple-bg)); /* Using the darker, consistent purple */
+            background-color: rgb(var(--hamburger-dark-purple-bg));
         }
 
         body.theme-royale #hamburger-menu-button:hover {
@@ -203,14 +201,14 @@
         <div class="p-6">
             <h2 class="text-2xl font-bold text-app-blue mb-8">Navigation</h2>
             <nav class="flex flex-col space-y-4">
-                <a href="#home-view" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
-                    <i data-lucide="home" class="w-5 h-5 mr-3"></i> Home Page
+                <a href="#/" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
+                    <i data-lucide="home" class="w-5 h-5 mr-3"></i> Home
                 </a>
-                <a href="#features-view" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
-                    <i data-lucide="sparkles" class="w-5 h-5 mr-3"></i> Features Tab
-                </a>
-                <a href="#royale-view" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
+                <a href="#/taleroyale" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
                     <i data-lucide="gem" class="w-5 h-5 mr-3"></i> Tale Royale
+                </a>
+                <a href="#/features?platform=ft" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
+                    <i data-lucide="sparkles" class="w-5 h-5 mr-3"></i> Features
                 </a>
             </nav>
         </div>
@@ -255,11 +253,11 @@
                     <i data-lucide="send" class="w-5 h-5 mr-2"></i>
                     Telegram
                 </a>
-                <button onclick="switchView('features-view')" 
+                <a href="#/features?platform=ft"
                         class="glass-card flex items-center justify-center px-6 py-3 text-lg font-bold rounded-xl text-app-blue border-2 border-app-blue bg-transparent hover:bg-app-blue/10 transition duration-300 transform hover:scale-105">
                     <i data-lucide="bolt" class="w-5 h-5 mr-2"></i>
                     Features
-                </button>
+                </a>
             </div>
 
             <section class="mb-16">
@@ -319,7 +317,7 @@
                         </button>
                         <div class="faq-content h-0 overflow-hidden transition-[height] duration-300 ease-out">
                             <p class="p-5 pt-0 text-gray-300 leading-relaxed">
-                                Join the **Telegram Channel** for instant access, more news, updates, and community support!
+                                Join the Telegram Channel for more news and updates
                             </p>
                         </div>
                     </div>
@@ -329,9 +327,9 @@
 
         <section id="features-view" class="view-content container mx-auto hidden">
             <div class="flex items-center mb-8">
-                <button onclick="switchView('home-view')" class="glass-card p-3 rounded-full text-app-blue hover:bg-app-blue/10 transition duration-200 mr-4">
+                <a href="#/" class="glass-card p-3 rounded-full text-app-blue hover:bg-app-blue/10 transition duration-200 mr-4">
                     <i data-lucide="arrow-left" class="w-6 h-6"></i>
-                </button>
+                </a>
                 <h2 class="text-4xl font-extrabold text-app-blue">Tale Stars Features</h2>
             </div>
 
@@ -344,7 +342,7 @@
                     <i data-lucide="video" class="w-5 h-5 mr-2"></i>
                     Watch Feature Preview Video
                 </a>
-                <p class="text-sm text-gray-500 mt-2">Redirects to Telegram.</p>
+                <p class="text-sm text-gray-500 mt-2">Redirects to Telegram</p>
             </div>
         </section>
 
@@ -469,6 +467,23 @@
 
         let sidebarNav, sidebarOverlay, hamburgerButton, modalElement, modalTitle, modalDescription;
 
+        function handleRouting() {
+            const hash = window.location.hash || '#/';
+            let targetViewId;
+            
+            if (hash === '#/') {
+                targetViewId = 'home-view';
+            } else if (hash.startsWith('#/features')) {
+                targetViewId = 'features-view';
+            } else if (hash === '#/royale') {
+                targetViewId = 'royale-view';
+            } else {
+                targetViewId = 'home-view';
+            }
+            
+            switchView(targetViewId);
+        }
+
         window.onload = function() {
             sidebarNav = document.getElementById('sidebar-nav');
             sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -487,6 +502,8 @@
             
             lucide.createIcons();
             
+            window.addEventListener('hashchange', handleRouting);
+            handleRouting();
             window.addEventListener('resize', handleCanvasResize);
         };
 
@@ -495,12 +512,8 @@
             sidebarOverlay.addEventListener('click', closeSidebar);
             
             document.querySelectorAll('.sidebar-link').forEach(link => {
-                link.addEventListener('click', (e) => {
+                link.addEventListener('click', () => {
                     closeSidebar();
-                    const targetView = e.currentTarget.getAttribute('href').substring(1);
-                    if (targetView) {
-                        switchView(targetView);
-                    }
                 });
             });
         }
@@ -678,7 +691,7 @@
             const subtitleElement = document.getElementById('subtitle-text');
             if (!subtitleElement) return;
             const baseText = 'The Next-Level Brawl Stars Official ';
-            const words = ['Mod.', 'Cheat.', 'Exploit.', 'Mod.']; 
+            const words = ['Mod', 'Cheat', 'Exploit', 'Mod']; 
             
             let state = 'INITIAL_TYPING';
             let wordIndex = 0; 
