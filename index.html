@@ -4,19 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tale Brawl - TS</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
-
+        @font-face {
+            font-family: 'Supercell Magic';
+            src: url('Supercell-Magic.woff2') format('woff2'),
+                 url('Supercell-Magic.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+    
+    <style>
         :root {
             --app-blue: 0, 150, 255;
             --app-dark-blue: 10, 20, 40;
+            --royale-purple: 147, 51, 234; /* Base purple */
+            --royale-gold: 252, 211, 77;
+            --royale-dark-purple: 90, 30, 140; /* Deeper purple for shadows/3D effect */
+            --hamburger-dark-purple-bg: 40, 0, 80; /* Darker, desaturated purple for bg */
         }
 
-        .brawl-title-tale {
+        .brawl-title-tale, .brawl-title-brawl {
             font-family: 'Luckiest Guy', cursive;
+            letter-spacing: 2px;
+        }
+        
+        .brawl-title-tale {
             color: #4b8dff;
             text-shadow: 
                 -4px -4px 0 #000, 
@@ -26,7 +46,6 @@
         }
 
         .brawl-title-brawl {
-            font-family: 'Luckiest Guy', cursive;
             color: white;
             text-shadow: 
                 -4px -4px 0 #000, 
@@ -35,9 +54,15 @@
                 4px 4px 0 #000;
         }
 
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         .glass-card {
             background-color: rgba(10, 20, 40, 0.7);
-            border: 1px solid rgba(var(--app-blue), 0.5);
+            border: 1px solid rgba(var(--app-blue), 0.5); 
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -60,7 +85,15 @@
 
         .tilt-active {
             transform: perspective(1000px) rotateX(var(--rX)) rotateY(var(--rY)) scale(1.05);
-            box-shadow: 0 10px 40px rgba(var(--app-blue), 0.5);
+            box-shadow: 0 10px 40px var(--tilt-glow-color, rgba(var(--app-blue), 0.5));
+        }
+        
+        body:not(.theme-royale) .tilt-active {
+            --tilt-glow-color: rgba(var(--app-blue), 0.5);
+        }
+        
+        body.theme-royale .tilt-active {
+            --tilt-glow-color: rgba(var(--royale-gold), 0.7);
         }
 
         #particle-canvas {
@@ -75,6 +108,72 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-thumb { background: rgba(var(--app-blue), 0.6); border-radius: 4px; }
         ::-webkit-scrollbar-track { background: var(--app-dark-blue); }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .royale-title-main {
+            font-family: 'Supercell Magic', 'You Blockhead', 'Luckiest Guy', cursive;
+            letter-spacing: 2px;
+            line-height: 0.9;
+        }
+
+        .royale-title-tale {
+            color: white;
+            text-shadow: 
+                -3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
+                3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
+                -3px 3px 0 rgba(var(--royale-dark-purple), 0.8), 
+                3px 3px 0 rgba(var(--royale-dark-purple), 0.8),
+                -6px 6px 0 rgba(var(--royale-dark-purple), 0.6),
+                -9px 9px 0 rgba(var(--royale-dark-purple), 0.4);
+        }
+
+        .royale-title-royale {
+            color: rgb(var(--royale-gold)); /* Changed to gold */
+            text-shadow: 
+                -3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
+                3px -3px 0 rgba(var(--royale-dark-purple), 0.8), 
+                -3px 3px 0 rgba(var(--royale-dark-purple), 0.8), 
+                3px 3px 0 rgba(var(--royale-dark-purple), 0.8),
+                -6px 6px 0 rgba(var(--royale-dark-purple), 0.6),
+                -9px 9px 0 rgba(var(--royale-dark-purple), 0.4);
+        }
+
+        .royale-glass-card {
+            /* Removed border, updated background color */
+            background-color: rgba(var(--royale-dark-purple), 0.2); 
+            border: none; /* Removed border */
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* New: Soft text effect for content inside royale-glass-card */
+        .royale-glass-card h3, .royale-glass-card h4, .royale-glass-card h5, .royale-glass-card p, .royale-glass-card strong {
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); /* Soft white glow/shadow */
+        }
+
+
+        body.theme-royale ::-webkit-scrollbar-thumb { 
+            background: rgba(var(--royale-purple), 0.6); 
+        }
+
+        body.theme-royale #hamburger-menu-button {
+            color: rgb(var(--royale-purple));
+            border-color: rgba(var(--royale-purple), 0.5);
+            box-shadow: 0 0 15px rgba(var(--royale-purple), 0.5);
+            background-color: rgb(var(--hamburger-dark-purple-bg)); /* Using the darker, consistent purple */
+        }
+
+        body.theme-royale #hamburger-menu-button:hover {
+            background-color: rgba(var(--royale-purple), 0.2);
+        }
     </style>
 
     <script>
@@ -83,41 +182,68 @@
                 extend: {
                     colors: {
                         'app-blue': `rgb(var(--app-blue))`,
-                        'app-dark': `rgb(var(--app-dark-blue))`
+                        'app-dark': `rgb(var(--app-dark-blue))`,
+                        'royale-purple': `rgb(var(--royale-purple))`,
+                        'royale-gold': `rgb(var(--royale-gold))`,
+                        'royale-dark-purple': `rgb(var(--royale-dark-purple))`,
+                        'hamburger-dark-purple-bg': `rgb(var(--hamburger-dark-purple-bg))`,
                     },
                     boxShadow: {
                         'blue-glow': `0 0 25px rgba(var(--app-blue), 0.5)`,
+                        'gold-glow': `0 0 25px rgba(var(--royale-gold), 0.7)`,
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-app-dark text-white min-h-screen font-sans antialiased overflow-x-hidden flex flex-col">
+<body class="bg-app-dark text-white min-h-screen flex flex-col">
 
+    <div id="sidebar-nav" class="fixed top-0 left-0 h-full w-72 bg-app-dark/80 backdrop-blur-lg z-[60] transform -translate-x-full transition-transform duration-300 ease-in-out border-r border-app-blue/30">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-app-blue mb-8">Navigation</h2>
+            <nav class="flex flex-col space-y-4">
+                <a href="#home-view" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
+                    <i data-lucide="home" class="w-5 h-5 mr-3"></i> Home Page
+                </a>
+                <a href="#features-view" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
+                    <i data-lucide="sparkles" class="w-5 h-5 mr-3"></i> Features Tab
+                </a>
+                <a href="#royale-view" class="sidebar-link text-lg text-gray-300 hover:text-app-blue hover:bg-app-blue/10 p-3 rounded-lg transition-colors duration-200 flex items-center">
+                    <i data-lucide="gem" class="w-5 h-5 mr-3"></i> Tale Royale
+                </a>
+            </nav>
+        </div>
+    </div>
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-50 hidden"></div>
+
+    <button id="hamburger-menu-button" class="fixed top-4 left-4 z-[61] w-12 h-12 bg-app-dark/70 backdrop-blur-sm border border-app-blue/50 rounded-full flex items-center justify-center text-app-blue hover:bg-app-blue/20 transition-colors duration-200 shadow-lg">
+        <i data-lucide="menu" class="w-6 h-6"></i>
+    </button>
+    
     <canvas id="particle-canvas"></canvas>
 
     <main class="relative z-10 p-4 md:p-8 flex-grow">
         
-        <div id="feature-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-app-dark/80 backdrop-blur-sm transition-opacity duration-300" onclick="closeModal()">
+        <div id="feature-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-app-dark/80 backdrop-blur-sm" onclick="closeFeatureModal()">
             <div class="glass-card w-full max-w-lg p-6 rounded-2xl border-2 border-app-blue shadow-blue-glow animate-fadeIn" onclick="event.stopPropagation();">
                 <h3 id="modal-title" class="text-3xl font-extrabold text-app-blue mb-4"></h3>
                 <p id="modal-description" class="text-gray-300 leading-relaxed"></p>
                 <div class="mt-6 flex justify-end">
-                    <button onclick="closeModal()" class="px-6 py-2 bg-app-blue/20 text-app-blue font-bold rounded-xl hover:bg-app-blue/40 transition duration-200">
+                    <button onclick="closeFeatureModal()" class="px-6 py-2 bg-app-blue/20 text-app-blue font-bold rounded-xl hover:bg-app-blue/40 transition duration-200">
                         Close
                     </button>
                 </div>
             </div>
         </div>
 
-        <section id="home-view" class="view-content container mx-auto fade-in-section">
+        <section id="home-view" class="view-content container mx-auto animate-fadeIn">
             <header class="text-center mb-12">
                 <img src="https://i.postimg.cc/Kjq90PmV/IMG-20251023-153958-261.jpg" alt="TS Logo" class="h-24 w-24 mx-auto mb-4 rounded-full shadow-blue-glow" onerror="this.onerror=null; this.src='https://placehold.co/96x96/0096FF/ffffff?text=LOGO'">
                 
                 <h1 class="text-6xl md:text-8xl font-extrabold mb-2 leading-none">
-                    <span id="tale-text" class="brawl-title-tale"></span>
-                    <span id="brawl-text" class="brawl-title-brawl"></span>
+                    <span id="title-tale-text" class="brawl-title-tale"></span>
+                    <span id="title-brawl-text" class="brawl-title-brawl"></span>
                 </h1>
                 
                 <p id="subtitle-text" class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mt-2"></p>
@@ -201,7 +327,7 @@
             </section>
         </section>
 
-        <section id="features-view" class="view-content container mx-auto hidden fade-in-section">
+        <section id="features-view" class="view-content container mx-auto hidden">
             <div class="flex items-center mb-8">
                 <button onclick="switchView('home-view')" class="glass-card p-3 rounded-full text-app-blue hover:bg-app-blue/10 transition duration-200 mr-4">
                     <i data-lucide="arrow-left" class="w-6 h-6"></i>
@@ -209,7 +335,7 @@
                 <h2 class="text-4xl font-extrabold text-app-blue">Tale Stars Features</h2>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div id="features-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             </div>
 
             <div class="text-center mt-16 p-4">
@@ -222,15 +348,88 @@
             </div>
         </section>
 
+        <section id="royale-view" class="view-content container mx-auto hidden">
+            <header class="text-center mb-12">
+                <img src="https://i.postimg.cc/90jbL16p/cropped-circle-image.png" alt="Tale Royale Logo" class="h-24 w-24 mx-auto mb-4 rounded-full shadow-gold-glow" onerror="this.onerror=null; this.src='https://placehold.co/96x96/9333ea/fcd34d?text=TR'">
+                
+                <h1 class="text-6xl md:text-8xl font-extrabold mb-8 leading-none royale-title-main">
+                    <span class="royale-title-tale">TALE</span> 
+                    <span class="royale-title-royale">ROYALE</span>
+                </h1>
+                
+                <a href="https://t.me/talebrawl" target="_blank" rel="noopener noreferrer" 
+                        class="glass-card flex items-center justify-center px-6 py-3 text-lg font-bold rounded-xl text-royale-purple border-2 border-royale-purple bg-transparent hover:bg-royale-purple/10 transition duration-300 transform hover:scale-105 w-fit mx-auto">
+                    <i data-lucide="send" class="w-5 h-5 mr-2 text-royale-purple"></i>
+                    Telegram
+                </a>
+            </header>
+
+            <section class="mb-16">
+                <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <div class="royale-glass-card rounded-2xl p-6 text-center tilt-card" data-tilt>
+                        <h3 class="text-2xl font-bold mb-2 text-royale-gold">In Few Days</h3>
+                        <p class="text-lg text-gray-300">Release</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="max-w-3xl mx-auto mb-16">
+                <div class="royale-glass-card rounded-2xl p-6 md:p-10 tilt-card" data-tilt>
+                    <img src="https://i.postimg.cc/90jbL16p/cropped-circle-image.png" alt="Tale Royale Logo" class="h-20 w-20 mx-auto mb-6 rounded-full" onerror="this.onerror=null; this.src='https://placehold.co/80x80/9333ea/fcd34d?text=TR'">
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start space-x-4">
+                            <i data-lucide="sparkles" class="w-6 h-6 text-royale-gold flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-xl font-bold text-royale-gold">Introducing Tale Royale</h4>
+                                <p class="text-gray-300">Discover the new Clash Royale Mod that we will release soon.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-4">
+                            <i data-lucide="list-checks" class="w-6 h-6 text-royale-gold flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-xl font-bold text-royale-gold">Features</h4>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4 pl-10">
+                            <i data-lucide="refresh-cw" class="w-5 h-5 text-royale-gold flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h5 class="text-lg font-semibold text-white">Deck Cycle Counter</h5>
+                                <p class="text-gray-400">Automatically shows your opponent’s deck cycle. Professional players excel by tracking deck cycles — with this feature, it’s done automatically. The opponent’s deck cycle will appear at the top right during matches.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-4 pl-10">
+                            <i data-lucide="droplet" class="w-5 h-5 text-royale-gold flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h5 class="text-lg font-semibold text-white">Elixir Counter</h5>
+                                <p class="text-gray-400">Lets you see how much elixir your opponent currently has.</p>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-royale-purple/30 pt-4">
+                             <p class="text-gray-300"><strong class="text-royale-gold">Price?</strong> Tale Royale is completely free.</p>
+                             <p class="text-gray-400 text-sm">Also, please don’t believe scam mods — there’s no other Clash Royale mod yet.</p>
+                        </div>
+
+                        <div class="border-t border-royale-purple/30 pt-4">
+                             <p class="text-gray-300"><strong class="text-royale-gold">Ban risk?</strong> No.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+
     </main>
 
-    <footer class="relative z-10 text-center text-gray-500 p-6 mt-8">
-        <p>&copy; 2025 All rights reserved.</p>
-        <p class="mt-2">Join us on <a href="https://t.me/talebrawl" target="_blank" rel="noopener noreferrer" class="text-app-blue hover:underline">Telegram</a></p>
+    <footer class="relative z-10 py-8 text-center border-t border-app-blue/20">
+        <p class="text-gray-400">&copy; 2025 Tale Stars. All rights reserved</p>
     </footer>
 
     <script>
-        const featureData = [
+        const FEATURE_DATA = [
             { title: "Auto Dodge", tag: "EXPLOIT", description: "Automatically dodges incoming enemy bullets, significantly increasing your brawler's survivability in intense skirmishes." },
             { title: "Aim Bot", tag: "EXPLOIT", description: "Auto aims at enemies with advanced predictive targeting, giving you an 85% chance of connecting with your bullets on a target." },
             { title: "Auto Charge", tag: "EXPLOIT", description: "Automatically charges the variable-range attacks of brawlers like Janet, Hank, and Angelo to their maximum range for optimal damage output." },
@@ -259,176 +458,140 @@
             { title: "Chat Spam", tag: "EXPLOIT", description: "Flood the team/club chat by automatically spamming a pre-set message at a high frequency." },
             { title: "Decreased Cooldown", tag: "EXPLOIT", description: "Reduces server latency and packet loss, effectively decreasing ping during matches for a smoother experience." },
             { title: "Anti AFK", tag: "EXPLOIT", description: "Disables the AFK kick mechanism, allowing you to stay idle for as long as you want without being removed from the match." },
-            { title: "Remove Black Borders", tag: "VISUAL", description: "Removes the black borders that appear around the screen during matches." },
+            { title: "Remove Black Borders", tag: "VISWAL", description: "Removes the black borders that appear around the screen during matches." },
             { title: "Invite By ID", tag: "HALF-EXPLOIT", description: "Lets you invite friends to friendly matches by their tag even if you’re not the team leader." },
             { title: "Font Changer", tag: "VISUAL", description: "Changes the in-game font to custom fonts of your choosing." },
             { title: "Willow Mod", tag: "EXPLOIT", description: "NEW FEATURE: When you control an enemy brawler using Willow's Super, it allows you to use the controlled person's Super ability for yourself/your team." },
         ];
 
-        let canvas, ctx, particles = [];
-        const particleCount = 100;
+        let particleCanvas, particleCtx, particles = [];
+        const PARTICLE_COUNT = 100;
 
-        function initParticles() {
-            canvas = document.getElementById('particle-canvas');
-            ctx = canvas.getContext('2d');
-            resizeCanvas();
+        let sidebarNav, sidebarOverlay, hamburgerButton, modalElement, modalTitle, modalDescription;
 
-            for (let i = 0; i < particleCount; i++) {
-                particles.push(new Particle());
-            }
-        }
+        window.onload = function() {
+            sidebarNav = document.getElementById('sidebar-nav');
+            sidebarOverlay = document.getElementById('sidebar-overlay');
+            hamburgerButton = document.getElementById('hamburger-menu-button');
+            modalElement = document.getElementById('feature-modal');
+            modalTitle = document.getElementById('modal-title');
+            modalDescription = document.getElementById('modal-description');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
+            initParticleSystem();
+            initFAQAccordion();
+            initCardTilting();
+            initSidebarControls();
+            
+            renderFeaturesList();
+            startTitleAnimation();
+            
+            lucide.createIcons();
+            
+            window.addEventListener('resize', handleCanvasResize);
+        };
 
-        class Particle {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2 + 1;
-                this.speedX = Math.random() * 0.5 - 0.25;
-                this.speedY = Math.random() * 0.5 - 0.25;
-                this.color = `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--app-blue')}, ${Math.random() * 0.5 + 0.1})`;
-            }
-
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-
-                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        function animateParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
-                
-                for (let j = i; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance < 80) {
-                        ctx.strokeStyle = `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--app-blue')}, ${1 - (distance / 80)})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.stroke();
+        function initSidebarControls() {
+            hamburgerButton.addEventListener('click', openSidebar);
+            sidebarOverlay.addEventListener('click', closeSidebar);
+            
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    closeSidebar();
+                    const targetView = e.currentTarget.getAttribute('href').substring(1);
+                    if (targetView) {
+                        switchView(targetView);
                     }
-                }
-            }
-            requestAnimationFrame(animateParticles);
-        }
-
-        function typeWriterSimple(elementId, textToType, speed, callback) {
-            const element = document.getElementById(elementId);
-            let i = 0;
-            
-            function typing() {
-                if (i < textToType.length) {
-                    element.textContent += textToType.charAt(i);
-                    i++;
-                    setTimeout(typing, speed);
-                } else {
-                    if (callback) callback();
-                }
-            }
-            typing();
-        }
-
-        function startComplexSubtitleAnimation() {
-            const subtitleElement = document.getElementById('subtitle-text');
-            const baseText = 'The Next-Level Brawl Stars Official ';
-            const cycleWords = ['Mod', 'Cheat', 'Exploit', 'Mod']; 
-            let state = 'INITIAL_TYPING';
-            let cycleStep = 0; 
-            let i = 0;
-
-            function animate() {
-                switch (state) {
-                    case 'INITIAL_TYPING':
-                        const initialFullText = baseText + cycleWords[0];
-                        if (subtitleElement.textContent.length < initialFullText.length) {
-                            subtitleElement.textContent += initialFullText.charAt(i);
-                            i++;
-                            setTimeout(animate, 50);
-                        } else {
-                            state = 'CYCLING_DELETING';
-                            i = cycleWords[0].length;
-                            setTimeout(animate, 1500);
-                        }
-                        break;
-
-                    case 'CYCLING_DELETING':
-                        if (i > 0) {
-                            subtitleElement.textContent = subtitleElement.textContent.slice(0, -1);
-                            i--;
-                            setTimeout(animate, 30);
-                        } else {
-                            cycleStep++;
-                            if (cycleStep >= cycleWords.length) {
-                                state = 'DONE';
-                                return; 
-                            }
-                            state = 'CYCLING_TYPING';
-                            i = 0;
-                            setTimeout(animate, 500);
-                        }
-                        break;
-
-                    case 'CYCLING_TYPING':
-                        const currentWord = cycleWords[cycleStep];
-                        if (i < currentWord.length) {
-                            subtitleElement.textContent += currentWord.charAt(i);
-                            i++;
-                            setTimeout(animate, 80);
-                        } else {
-                            if (cycleStep < cycleWords.length - 1) {
-                                state = 'CYCLING_DELETING';
-                                setTimeout(animate, 1500);
-                            } else {
-                                state = 'DONE';
-                            }
-                        }
-                        break;
-                    
-                    case 'DONE':
-                        return;
-                }
-            }
-
-            animate();
-        }
-
-        function startTypingAnimation() {
-            document.getElementById('tale-text').textContent = '';
-            document.getElementById('brawl-text').textContent = '';
-            document.getElementById('subtitle-text').textContent = '';
-            
-            typeWriterSimple('tale-text', 'Tale', 100, () => {
-                typeWriterSimple('brawl-text', ' Brawl', 100, () => {
-                    startComplexSubtitleAnimation();
                 });
             });
         }
 
-        function switchView(targetId) {
-            const views = document.querySelectorAll('.view-content');
-            views.forEach(view => {
-                const isTarget = view.id === targetId;
+        function initParticleSystem() {
+            particleCanvas = document.getElementById('particle-canvas');
+            particleCtx = particleCanvas.getContext('2d');
+            handleCanvasResize();
+
+            particles = [];
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(new Particle());
+            }
+            
+            animateParticles();
+        }
+
+        function initFAQAccordion() {
+            document.querySelectorAll('[data-faq-toggle]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const content = button.nextElementSibling;
+                    const icon = button.querySelector('i');
+                    const is_open = content.classList.contains('active');
+
+                    document.querySelectorAll('.faq-content.active').forEach(openContent => {
+                        if (openContent !== content) {
+                            openContent.style.height = '0';
+                            openContent.classList.remove('active');
+                            openContent.previousElementSibling.querySelector('i').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    if (!is_open) {
+                        content.style.height = content.scrollHeight + 'px';
+                        content.classList.add('active');
+                        icon.style.transform = 'rotate(180deg)';
+                    } else {
+                        content.style.height = '0';
+                        content.classList.remove('active');
+                        icon.style.transform = 'rotate(0deg)';
+                    }
+                });
+            });
+        }
+        
+        function initCardTilting() {
+            const cards = document.querySelectorAll('.tilt-card');
+            cards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+
+                    const maxTilt = 5;
+                    const rotateY = (x - centerX) / centerX * maxTilt * -1;
+                    const rotateX = (y - centerY) / centerY * maxTilt;
+
+                    card.style.setProperty('--rX', `${rotateX}deg`);
+                    card.style.setProperty('--rY', `${rotateY}deg`);
+                    card.classList.add('tilt-active');
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.classList.remove('tilt-active');
+                    card.style.setProperty('--rX', '0deg');
+                    card.style.setProperty('--rY', '0deg');
+                });
+            });
+        }
+
+        function openSidebar() {
+            sidebarNav.classList.remove('-translate-x-full');
+            sidebarOverlay.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeSidebar() {
+            sidebarNav.classList.add('-translate-x-full');
+            sidebarOverlay.classList.add('hidden');
+        }
+
+        function switchView(targetViewId) {
+            const isRoyale = targetViewId === 'royale-view';
+            document.body.classList.toggle('theme-royale', isRoyale);
+            
+            particles.forEach(p => p.setTheme(isRoyale));
+
+            document.querySelectorAll('.view-content').forEach(view => {
+                const isTarget = (view.id === targetViewId);
                 view.classList.toggle('hidden', !isTarget);
                 
                 if (isTarget) {
@@ -437,35 +600,31 @@
                     view.classList.remove('animate-fadeIn');
                 }
             });
+            
             lucide.createIcons();
             window.scrollTo(0, 0);
         }
 
-        function setupFaqAccordion() {
-            document.querySelectorAll('[data-faq-toggle]').forEach(button => {
-                button.addEventListener('click', () => {
-                    const content = button.nextElementSibling;
-                    const icon = button.querySelector('i');
-                    const isOpen = content.classList.contains('active');
-
-                    document.querySelectorAll('.faq-content.active').forEach(openContent => {
-                        openContent.style.height = '0';
-                        openContent.classList.remove('active');
-                        openContent.previousElementSibling.querySelector('i').style.transform = 'rotate(0deg)';
-                    });
-
-                    if (!isOpen) {
-                        content.style.height = content.scrollHeight + 'px';
-                        content.classList.add('active');
-                        icon.style.transform = 'rotate(180deg)';
-                    }
-                });
-            });
+        function showFeatureModal(title, description) {
+            modalTitle.textContent = title;
+            modalDescription.textContent = description;
+            
+            modalElement.classList.remove('hidden');
+            modalElement.classList.add('flex');
+            modalElement.classList.add('animate-fadeIn');
         }
-        
-        function renderFeatureCards() {
-            const container = document.querySelector('#features-view .grid');
-            container.innerHTML = featureData.map(feature => {
+
+        function closeFeatureModal() {
+            modalElement.classList.add('hidden');
+            modalElement.classList.remove('flex');
+            modalElement.classList.remove('animate-fadeIn');
+        }
+
+        function renderFeaturesList() {
+            const container = document.getElementById('features-grid');
+            if (!container) return;
+
+            container.innerHTML = FEATURE_DATA.map(feature => {
                 let tagClass = '';
                 if (feature.tag === 'EXPLOIT') tagClass = 'tag-exploit';
                 else if (feature.tag === 'VISUAL') tagClass = 'tag-visual';
@@ -473,7 +632,7 @@
 
                 return `
                     <div class="glass-card rounded-2xl p-6 shadow-xl border-app-blue/50 cursor-pointer transition duration-300 transform hover:scale-[1.02] feature-card" 
-                         onclick="openModal('${feature.title}', '${feature.description}')">
+                         onclick="showFeatureModal('${feature.title}', '${feature.description.replace(/'/g, "\\'")}')">
                         <div class="flex justify-between items-start mb-3">
                             <h4 class="text-xl font-bold text-app-blue">${feature.title}</h4>
                             <span class="text-xs font-semibold px-3 py-1 rounded-full ${tagClass} transform hover:scale-105">
@@ -486,73 +645,175 @@
             }).join('');
         }
 
-        function openModal(title, description) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-description').textContent = description;
-            const modal = document.getElementById('feature-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            modal.classList.remove('animate-fadeOut');
-            modal.classList.add('animate-fadeIn');
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('feature-modal');
-            modal.classList.remove('flex');
-            modal.classList.add('hidden');
-            modal.classList.remove('animate-fadeIn');
-        }
-
-        function setupTilt() {
-            const cards = document.querySelectorAll('.tilt-card');
-            cards.forEach(card => {
-                card.addEventListener('mousemove', (e) => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-
-                    const maxTilt = 5;
-                    const rY = (x - centerX) / centerX * maxTilt * -1;
-                    const rX = (y - centerY) / centerY * maxTilt;
-
-                    card.style.setProperty('--rX', `${rX}deg`);
-                    card.style.setProperty('--rY', `${rY}deg`);
-                    card.classList.add('tilt-active');
-                });
-
-                card.addEventListener('mouseleave', () => {
-                    card.classList.remove('tilt-active');
-                    card.style.setProperty('--rX', '0deg');
-                    card.style.setProperty('--rY', '0deg');
+        function startTitleAnimation() {
+            document.getElementById('title-tale-text').textContent = '';
+            document.getElementById('title-brawl-text').textContent = '';
+            document.getElementById('subtitle-text').textContent = '';
+            
+            typewriterEffect('title-tale-text', 'Tale', 100, () => {
+                typewriterEffect('title-brawl-text', ' Brawl', 100, () => {
+                    startSubtitleAnimation();
                 });
             });
         }
 
-        window.onload = function() {
-            window.addEventListener('resize', resizeCanvas);
+        function typewriterEffect(elementId, text, speed, callback) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            let i = 0;
             
-            initParticles();
-            animateParticles();
-            setupFaqAccordion();
-            renderFeatureCards();
-            setupTilt();
-            startTypingAnimation();
-            lucide.createIcons();
-        };
+            function typing() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(typing, speed);
+                } else if (callback) {
+                    callback();
+                }
+            }
+            typing();
+        }
 
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .animate-fadeIn {
-                animation: fadeIn 0.5s ease-out forwards;
+        function startSubtitleAnimation() {
+            const subtitleElement = document.getElementById('subtitle-text');
+            if (!subtitleElement) return;
+            const baseText = 'The Next-Level Brawl Stars Official ';
+            const words = ['Mod.', 'Cheat.', 'Exploit.', 'Mod.']; 
+            
+            let state = 'INITIAL_TYPING';
+            let wordIndex = 0; 
+            let charIndex = 0;
+
+            function animate() {
+                switch (state) {
+                    case 'INITIAL_TYPING':
+                        const initialFullText = baseText + words[0];
+                        if (charIndex < initialFullText.length) {
+                            subtitleElement.textContent = initialFullText.substring(0, charIndex + 1);
+                            charIndex++;
+                            setTimeout(animate, 50);
+                        } else {
+                            state = 'DELETING';
+                            charIndex = words[0].length;
+                            setTimeout(animate, 1500);
+                        }
+                        break;
+
+                    case 'DELETING':
+                        if (charIndex > 0) {
+                            subtitleElement.textContent = baseText + words[wordIndex].substring(0, charIndex - 1);
+                            charIndex--;
+                            setTimeout(animate, 30);
+                        } else {
+                            wordIndex++;
+                            if (wordIndex >= words.length) {
+                                state = 'DONE';
+                                return; 
+                            }
+                            state = 'TYPING';
+                            charIndex = 0;
+                            setTimeout(animate, 500);
+                        }
+                        break;
+
+                    case 'TYPING':
+                        const currentWord = words[wordIndex];
+                        if (charIndex < currentWord.length) {
+                            subtitleElement.textContent = baseText + currentWord.substring(0, charIndex + 1);
+                            charIndex++;
+                            setTimeout(animate, 80);
+                        } else {
+                            if (wordIndex < words.length - 1) {
+                                state = 'DELETING';
+                                setTimeout(animate, 1500);
+                            } else {
+                                state = 'DONE';
+                            }
+                        }
+                        break;
+                    
+                    case 'DONE':
+                        return;
+                }
             }
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
+            animate();
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * window.innerWidth;
+                this.y = Math.random() * window.innerHeight;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 0.5 - 0.25;
+                this.speedY = Math.random() * 0.5 - 0.25;
+                this.setTheme(document.body.classList.contains('theme-royale'));
             }
-        `;
-        document.head.appendChild(style);
+
+            setTheme(isRoyale) {
+                const colorVar = isRoyale ? '--royale-purple' : '--app-blue';
+                const colorRgb = getComputedStyle(document.documentElement).getPropertyValue(colorVar);
+                this.color = `rgba(${colorRgb}, ${Math.random() * 0.5 + 0.1})`;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.x < 0 || this.x > window.innerWidth) this.speedX *= -1;
+                if (this.y < 0 || this.y > window.innerHeight) this.speedY *= -1;
+            }
+
+            draw(context) {
+                context.fillStyle = this.color;
+                context.beginPath();
+                context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                context.fill();
+            }
+        }
+
+        function handleCanvasResize() {
+            const dpr = window.devicePixelRatio || 1;
+            
+            particleCanvas.width = window.innerWidth * dpr;
+            particleCanvas.height = window.innerHeight * dpr;
+            
+            particleCanvas.style.width = window.innerWidth + 'px';
+            particleCanvas.style.height = window.innerHeight + 'px';
+            
+            particleCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function animateParticles() {
+            particleCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+            const isRoyale = document.body.classList.contains('theme-royale');
+            const lineVar = isRoyale ? '--royale-gold' : '--app-blue';
+            const lineRgb = getComputedStyle(document.documentElement).getPropertyValue(lineVar);
+
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw(particleCtx);
+                
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 80) {
+                        particleCtx.strokeStyle = `rgba(${lineRgb}, ${1 - (distance / 80)})`;
+                        particleCtx.lineWidth = 0.5;
+                        particleCtx.beginPath();
+                        particleCtx.moveTo(particles[i].x, particles[i].y);
+                        particleCtx.lineTo(particles[j].x, particles[j].y);
+                        particleCtx.stroke();
+                    }
+                }
+            }
+            
+            requestAnimationFrame(animateParticles);
+        }
+
     </script>
 </body>
 </html>
