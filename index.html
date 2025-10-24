@@ -334,7 +334,7 @@
             </div>
 
             <div id="features-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            </div>
+                </div>
 
             <div class="text-center mt-16 p-4">
                 <a href="https://t.me/talestarsfeatures/39" target="_blank" rel="noopener noreferrer" 
@@ -456,7 +456,7 @@
             { title: "Chat Spam", tag: "EXPLOIT", description: "Flood the team/club chat by automatically spamming a pre-set message at a high frequency." },
             { title: "Decreased Cooldown", tag: "EXPLOIT", description: "Reduces server latency and packet loss, effectively decreasing ping during matches for a smoother experience." },
             { title: "Anti AFK", tag: "EXPLOIT", description: "Disables the AFK kick mechanism, allowing you to stay idle for as long as you want without being removed from the match." },
-            { title: "Remove Black Borders", tag: "VISWAL", description: "Removes the black borders that appear around the screen during matches." },
+            { title: "Remove Black Borders", tag: "VISUAL", description: "Removes the black borders that appear around the screen during matches." }, 
             { title: "Invite By ID", tag: "HALF-EXPLOIT", description: "Lets you invite friends to friendly matches by their tag even if you’re not the team leader." },
             { title: "Font Changer", tag: "VISUAL", description: "Changes the in-game font to custom fonts of your choosing." },
             { title: "Willow Mod", tag: "EXPLOIT", description: "NEW FEATURE: When you control an enemy brawler using Willow's Super, it allows you to use the controlled person's Super ability for yourself/your team." },
@@ -495,15 +495,13 @@
             initparticlesys();
             faqaccord();
             cardtilt();
-            sidebarctrls();
-            
             listfeatures();
+            sidebarctrls(); 
             startitleanim();
-            
-            lucide.createIcons();
             
             window.addEventListener('hashchange', hashrouter);
             hashrouter();
+            lucide.createIcons();        
             window.addEventListener('resize', canvresize);
         };
 
@@ -512,7 +510,17 @@
             sbarovrly.addEventListener('click', closeside);
             
             document.querySelectorAll('.sidebar-link').forEach(link => {
-                link.addEventListener('click', () => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault(); 
+                    
+                    const newHash = link.getAttribute('href');
+                    
+                    if (window.location.hash !== newHash) {
+                        window.location.hash = newHash;
+                    } else {
+                        hashrouter(); 
+                    }
+                    
                     closeside();
                 });
             });
@@ -536,24 +544,27 @@
                 button.addEventListener('click', () => {
                     const content = button.nextElementSibling;
                     const icon = button.querySelector('i');
+                    const lucideicon = icon.querySelector('svg'); 
                     const isopen = content.classList.contains('active');
 
                     document.querySelectorAll('.faq-content.active').forEach(openContent => {
                         if (openContent !== content) {
                             openContent.style.height = '0';
                             openContent.classList.remove('active');
-                            openContent.previousElementSibling.querySelector('i').style.transform = 'rotate(0deg)';
+                            const openIcon = openContent.previousElementSibling.querySelector('i svg');
+                            if(openIcon) openIcon.style.transform = 'rotate(0deg)';
                         }
                     });
 
                     if (!isopen) {
                         content.style.height = content.scrollHeight + 'px';
                         content.classList.add('active');
-                        icon.style.transform = 'rotate(180deg)';
+                        // Target the SVG inside the <i> for rotation
+                        if(lucideicon) lucideicon.style.transform = 'rotate(180deg)';
                     } else {
                         content.style.height = '0';
                         content.classList.remove('active');
-                        icon.style.transform = 'rotate(0deg)';
+                        if(lucideicon) lucideicon.style.transform = 'rotate(0deg)';
                     }
                 });
             });
@@ -589,7 +600,7 @@
         function openside() {
             sbarnav.classList.remove('-translate-x-full');
             sbarovrly.classList.remove('hidden');
-            lucide.createIcons();
+            lucide.createIcons({ scope: sbarnav });
         }
 
         function closeside() {
@@ -609,12 +620,12 @@
                 
                 if (istarget) {
                     view.classList.add('animate-fadeIn');
+                    lucide.createIcons({ scope: view }); 
                 } else {
                     view.classList.remove('animate-fadeIn');
                 }
             });
             
-            lucide.createIcons();
             window.scrollTo(0, 0);
         }
 
@@ -639,9 +650,11 @@
 
             container.innerHTML = FEATURE_DATA.map(feature => {
                 let tagclass = '';
-                if (feature.tag === 'EXPLOIT') tagclass = 'tag-exploit';
-                else if (feature.tag === 'VISUAL') tagclass = 'tag-visual';
-                else if (feature.tag === 'HALF-EXPLOIT') tagclass = 'tag-half-exploit';
+                const tag = feature.tag === 'VISWAL' ? 'VISUAL' : feature.tag; 
+
+                if (tag === 'EXPLOIT') tagclass = 'tag-exploit';
+                else if (tag === 'VISUAL') tagclass = 'tag-visual';
+                else if (tag === 'HALF-EXPLOIT') tagclass = 'tag-half-exploit';
 
                 return `
                     <div class="glass-card rounded-2xl p-6 shadow-xl border-app-blue/50 cursor-pointer transition duration-300 transform hover:scale-[1.02] feature-card" 
@@ -649,13 +662,15 @@
                         <div class="flex justify-between items-start mb-3">
                             <h4 class="text-xl font-bold text-app-blue">${feature.title}</h4>
                             <span class="text-xs font-semibold px-3 py-1 rounded-full ${tagclass} transform hover:scale-105">
-                                ${feature.tag}
+                                ${tag}
                             </span>
                         </div>
                         <p class="text-gray-400 text-sm mt-2 line-clamp-2">${feature.description}</p>
                     </div>
                 `;
             }).join('');
+            
+            lucide.createIcons({ scope: container }); 
         }
 
         function startitleanim() {
