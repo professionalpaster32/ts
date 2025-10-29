@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
+import asyncio # <-- ADDED: Need this for async/await execution
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -550,7 +551,8 @@ async def member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = group_leaving_msg.get(chat_id, "Goodbye {user}!").replace("{user}", user.mention_html())
         await context.bot.send_message(chat_id, msg, parse_mode="HTML")
 
-def main():
+# CHANGED: 'def main()' to 'async def main():'
+async def main(): 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # Private commands
@@ -591,7 +593,10 @@ def main():
     if not RENDER_EXTERNAL_URL:
         raise RuntimeError("RENDER_EXTERNAL_URL not set")
     WEBHOOK_URL = f"{RENDER_EXTERNAL_URL}/webhook"
-    app.bot.set_webhook(url=WEBHOOK_URL)
+    
+    # CHANGED: Added 'await' to fix RuntimeWarning (line 594)
+    await app.bot.set_webhook(url=WEBHOOK_URL) 
+    
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
@@ -599,4 +604,6 @@ def main():
     )
 
 if __name__ == "__main__":
-    main()
+    # CHANGED: Used 'asyncio.run(main())' to execute the async main function
+    asyncio.run(main())
+
