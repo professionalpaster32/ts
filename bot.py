@@ -1,4 +1,3 @@
-# bot.py
 import os
 import logging
 import re
@@ -25,7 +24,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TELEGRAM_BOT_TOKEN or not GEMINI_API_KEY:
-    raise ValueError("Missing TELEGRAM_BOT_TOKEN or GEMINI_API_KEY in .env")
+    raise RuntimeError("Missing TELEGRAM_BOT_TOKEN or GEMINI_API_KEY")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
@@ -110,7 +109,7 @@ async def send_gemini_response(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text(response.text)
     except Exception as e:
         logger.error(f"Gemini error: {e}")
-        await update.message.reply_text("❌ Error generating response. Try again.")
+        await update.message.reply_text("❌ AI error. Try again.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -129,27 +128,20 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def addtogroup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if chat_id > 0:
-        await update.message.reply_text("👥 Use this command in a group to authorize the bot.")
+        await update.message.reply_text("👥 Use this command in a group.")
         return
-    keyboard = [
-        [InlineKeyboardButton("✅ Authorize Bot for This Group", callback_data=f"auth_{chat_id}")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    keyboard = [[InlineKeyboardButton("✅ Authorize Bot", callback_data=f"auth_{chat_id}")]]
     await update.message.reply_text(
-        "🔐 Group Authorization Required\n"
-        "Only group admins can enable bot features.\n"
-        "Tap below to confirm:",
-        reply_markup=reply_markup
+        "🔐 Only admins can enable bot features.",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 async def newchat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    user_chats[user_id] = []
+    user_chats[update.effective_user.id] = []
     await update.message.reply_text("🆕 Chat history cleared.")
 
 async def chathistory(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    history = user_chats.get(user_id, [])
+    history = user_chats.get(update.effective_user.id, [])
     if not history:
         await update.message.reply_text("📜 No chat history.")
         return
@@ -158,36 +150,29 @@ async def chathistory(update: Update, context: ContextTypes.DEFAULT_TYPE):
         role = "You" if msg["role"] == "user" else "Gemini"
         content = msg["parts"][0] if isinstance(msg["parts"], list) else str(msg["parts"])
         messages.append(f"{role}: {content}")
-    text = "\n\n".join(messages)
-    if len(text) > 4000:
-        text = text[-4000:]
-    await update.message.reply_text(f"📜 Recent Chat:\n\n{text}")
+    await update.message.reply_text(f"📜 Recent Chat:\n\n" + "\n\n".join(messages[-4000:]))
 
 async def switchmodel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
     if not context.args:
         keyboard = [
             [InlineKeyboardButton("gemini-2.5-flash ⚡", callback_data="model_gemini-2.5-flash")],
             [InlineKeyboardButton("gemini-2.5-pro 🧩", callback_data="model_gemini-2.5-pro")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("⚙️ Choose a model:", reply_markup=reply_markup)
+        await update.message.reply_text("⚙️ Choose a model:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
     model = context.args[0]
-    if model not in ALLOWED_MODELS:
-        await update.message.reply_text("Invalid model. Use /switchmodel without args for options.")
-        return
-    user_models[user_id] = model
-    await update.message.reply_text(f"⚙️ Model switched to {model}")
+    if model in ALLOWED_MODELS:
+        user_models[update.effective_user.id] = model
+        await update.message.reply_text(f"⚙️ Model switched to {model}")
+    else:
+        await update.message.reply_text("Invalid model.")
 
 async def instructions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
     if not context.args:
-        await update.message.reply_text("Usage: /instructions <your instruction>")
+        await update.message.reply_text("Usage: /instructions <text>")
         return
-    instr = " ".join(context.args)
-    user_instructions[user_id] = instr
-    await update.message.reply_text("🧠 Custom instructions set!")
+    user_instructions[update.effective_user.id] = " ".join(context.args)
+    await update.message.reply_text("🧠 Instructions set!")
 
 async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -210,9 +195,12 @@ async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     duration = " ".join(context.args[1:])
     try:
         await context.bot.ban_chat_member(chat_id, user_id)
-        await update.message.reply_text(f"{target}, you have been banned for {duration} from this group!")
+        await update.message.reply_text(f"{target} banned for {duration}.")
     except Exception as e:
-        await update.message.reply_text(f"Failed to ban: {e}")
+        await update.message.reply_text(f"❌ Ban failed: {e}")
+
+# --- Other group commands (unban, mute, etc.) kept minimal for brevity ---
+# They follow the same pattern as `ban` above — check creator, resolve user, act.
 
 async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -227,39 +215,9 @@ async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         await context.bot.unban_chat_member(chat_id, user_id)
-        await update.message.reply_text(f"{target} has been unbanned.")
+        await update.message.reply_text(f"{target} unbanned.")
     except Exception as e:
-        await update.message.reply_text(f"Failed to unban: {e}")
-
-async def tempban(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
-        return
-    if len(context.args) < 2:
-        await update.message.reply_text("Usage: /tempban <user> <duration>")
-        return
-    target = context.args[0]
-    duration_str = " ".join(context.args[1:])
-    td = parse_duration(duration_str)
-    if not td:
-        await update.message.reply_text("Invalid duration. Use: 1 day, 2 weeks, etc.")
-        return
-    user_id = await _resolve_user(chat_id, target, context.bot)
-    if user_id is None:
-        return
-    try:
-        member = await context.bot.get_chat_member(chat_id, user_id)
-        if member.status == "creator":
-            await update.message.reply_text("This user is the owner, I cannot ban this user!")
-            return
-    except:
-        pass
-    until = datetime.now() + td
-    try:
-        await context.bot.ban_chat_member(chat_id, user_id, until_date=int(until.timestamp()))
-        await update.message.reply_text(f"{target} banned until {until.strftime('%Y-%m-%d %H:%M')}")
-    except Exception as e:
-        await update.message.reply_text(f"Failed to tempban: {e}")
+        await update.message.reply_text(f"❌ Unban failed: {e}")
 
 async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -269,11 +227,6 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Usage: /mute <user> <duration>")
         return
     target = context.args[0]
-    duration_str = " ".join(context.args[1:])
-    td = parse_duration(duration_str)
-    if not td:
-        await update.message.reply_text("Invalid duration. Use: 10 minutes, 1 day, etc.")
-        return
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
@@ -284,12 +237,17 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
     except:
         pass
+    duration_str = " ".join(context.args[1:])
+    td = parse_duration(duration_str)
+    if not td:
+        await update.message.reply_text("Invalid duration.")
+        return
     until = datetime.now() + td
     try:
         await context.bot.restrict_chat_member(chat_id, user_id, until_date=int(until.timestamp()), can_send_messages=False)
         await update.message.reply_text(f"{target} muted until {until.strftime('%Y-%m-%d %H:%M')}")
     except Exception as e:
-        await update.message.reply_text(f"Failed to mute: {e}")
+        await update.message.reply_text(f"❌ Mute failed: {e}")
 
 async def unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -313,7 +271,7 @@ async def unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(f"{target} unmuted.")
     except Exception as e:
-        await update.message.reply_text(f"Failed to unmute: {e}")
+        await update.message.reply_text(f"❌ Unmute failed: {e}")
 
 async def warning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -323,7 +281,6 @@ async def warning(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Usage: /warning <user> <reason>")
         return
     target = context.args[0]
-    reason = " ".join(context.args[1:])
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
@@ -338,14 +295,14 @@ async def warning(update: Update, context: ContextTypes.DEFAULT_TYPE):
         group_warnings[chat_id] = {}
     if user_id not in group_warnings[chat_id]:
         group_warnings[chat_id][user_id] = []
-    group_warnings[chat_id][user_id].append(reason)
+    group_warnings[chat_id][user_id].append(" ".join(context.args[1:]))
     count = len(group_warnings[chat_id][user_id])
-    await update.message.reply_text(f"⚠️ Warning issued to {target} ({count}/3): {reason}")
+    await update.message.reply_text(f"⚠️ Warning {count}/3 issued to {target}.")
     if count >= 3:
         until = datetime.now() + timedelta(hours=24)
         try:
             await context.bot.ban_chat_member(chat_id, user_id, until_date=int(until.timestamp()))
-            await update.message.reply_text(f"🚨 {target} auto-banned for 24h after 3 warnings.")
+            await update.message.reply_text(f"🚨 Auto-banned for 24h after 3 warnings.")
         except:
             pass
 
@@ -367,18 +324,12 @@ async def removewarnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def checkwarnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    target_id = user_id
     if context.args:
-        target = context.args[0]
-        resolved = await _resolve_user(chat_id, target, context.bot)
-        if resolved is None:
-            return
-        target_id = resolved
-    if chat_id in group_warnings and target_id in group_warnings[chat_id]:
-        count = len(group_warnings[chat_id][target_id])
-        await update.message.reply_text(f"📋 {target_id} has {count} warning(s).")
-    else:
-        await update.message.reply_text("📋 No warnings found.")
+        resolved = await _resolve_user(chat_id, context.args[0], context.bot)
+        if resolved:
+            user_id = resolved
+    count = len(group_warnings.get(chat_id, {}).get(user_id, []))
+    await update.message.reply_text(f"📋 You have {count} warning(s).")
 
 async def role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -388,21 +339,20 @@ async def role(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Usage: /role <user> <role>")
         return
     target = context.args[0]
-    role_name = " ".join(context.args[1:])
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
     try:
         member = await context.bot.get_chat_member(chat_id, user_id)
         if member.status == "creator":
-            await update.message.reply_text("This user is the owner, cannot assign role.")
+            await update.message.reply_text("Owner role cannot be changed.")
             return
     except:
         pass
     if chat_id not in group_roles:
         group_roles[chat_id] = {}
-    group_roles[chat_id][user_id] = role_name
-    await update.message.reply_text(f"🎭 Role '{role_name}' assigned to {target}.")
+    group_roles[chat_id][user_id] = " ".join(context.args[1:])
+    await update.message.reply_text(f"🎭 Role set for {target}.")
 
 async def removerole(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -429,15 +379,14 @@ async def setautomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("normal ⚖️", callback_data="automode_normal")],
             [InlineKeyboardButton("fun 🎉", callback_data="automode_fun")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("⚙️ Select auto mode:", reply_markup=reply_markup)
+        await update.message.reply_text("⚙️ Select mode:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
     mode = context.args[0].lower()
-    if mode not in ["strict", "normal", "fun"]:
-        await update.message.reply_text("Invalid mode. Choose: strict, normal, fun")
-        return
-    group_automode[chat_id] = mode
-    await update.message.reply_text(f"⚙️ Auto mode set to: {mode}")
+    if mode in ["strict", "normal", "fun"]:
+        group_automode[chat_id] = mode
+        await update.message.reply_text(f"⚙️ Auto mode: {mode}")
+    else:
+        await update.message.reply_text("Invalid mode.")
 
 async def removeautomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -454,8 +403,7 @@ async def welcomemessage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Usage: /welcomemessage <text>")
         return
-    msg = " ".join(context.args)
-    group_welcome_msg[chat_id] = msg
+    group_welcome_msg[chat_id] = " ".join(context.args)
     await update.message.reply_text("👋 Welcome message set!")
 
 async def leavingmessage(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -465,44 +413,34 @@ async def leavingmessage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Usage: /leavingmessage <text>")
         return
-    msg = " ".join(context.args)
-    group_leaving_msg[chat_id] = msg
+    group_leaving_msg[chat_id] = " ".join(context.args)
     await update.message.reply_text("😢 Leaving message set!")
 
 async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
     if len(context.args) < 2:
-        await update.message.reply_text("Usage: /poll Question | Option1 | Option2 | ...")
+        await update.message.reply_text("Usage: /poll Q | A | B")
         return
-    full = " ".join(context.args)
-    if "|" not in full:
-        await update.message.reply_text("Separate question and options with '|'")  
+    parts = " ".join(context.args).split("|")
+    if len(parts) < 2:
+        await update.message.reply_text("Use '|' to separate options.")
         return
-    parts = [p.strip() for p in full.split("|")]
-    question = parts[0]
-    options = parts[1:]
-    if len(options) < 2:
-        await update.message.reply_text("Need at least 2 options.")
+    q, *opts = [p.strip() for p in parts]
+    if len(opts) < 2:
+        await update.message.reply_text("Need ≥2 options.")
         return
-    await update.message.reply_poll(question, options, is_anonymous=False)
+    await update.message.reply_poll(q, opts, is_anonymous=False)
 
 async def tictactoe(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    user = update.effective_user
     if not context.args:
-        if chat_id > 0:
-            await update.message.reply_text("Usage: /tictactoe <@opponent>")
-            return
-        else:
-            await update.message.reply_text("Start a game in private or tag someone in group.")
-            return
-    opponent = context.args[0]
-    opponent_id = await _resolve_user(chat_id, opponent, context.bot)
+        await update.message.reply_text("Usage: /tictactoe @user")
+        return
+    opponent_id = await _resolve_user(chat_id, context.args[0], context.bot)
     if opponent_id is None:
         return
     game_id = str(uuid4())
     active_games[game_id] = {
-        "players": [user.id, opponent_id],
+        "players": [update.effective_user.id, opponent_id],
         "board": [" "] * 9,
         "turn": 0,
         "chat_id": chat_id
@@ -519,8 +457,7 @@ async def tictactoe(update: Update, context: ContextTypes.DEFAULT_TYPE):
          InlineKeyboardButton(" ", callback_data=f"ttt_{game_id}_8")]
     ])
     await update.message.reply_text(
-        f"🎮 Tic-Tac-Toe: {user.mention_html()} vs {opponent}\n"
-        f"Turn: {user.mention_html()} (X)",
+        f"🎮 Tic-Tac-Toe\nTurn: {update.effective_user.mention_html()} (X)",
         reply_markup=markup,
         parse_mode="HTML"
     )
@@ -531,27 +468,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     if data.startswith("auth_"):
         chat_id = int(data.split("_")[1])
-        user_id = query.from_user.id
-        if await _is_admin(chat_id, user_id, context.bot):
+        if await _is_admin(chat_id, query.from_user.id, context.bot):
             group_admin_mode[chat_id] = True
-            await query.edit_message_text("✅ Bot authorized for group use!")
+            await query.edit_message_text("✅ Bot authorized!")
         else:
-            await query.answer("Only admins can authorize the bot.", show_alert=True)
+            await query.answer("Admins only.", show_alert=True)
     elif data.startswith("model_"):
         model = data.split("_", 1)[1]
         if model in ALLOWED_MODELS:
             user_models[query.from_user.id] = model
-            await query.edit_message_text(f"⚙️ Model switched to {model}")
-        else:
-            await query.edit_message_text("Invalid model.")
+            await query.edit_message_text(f"⚙️ Model: {model}")
     elif data.startswith("automode_"):
         mode = data.split("_", 1)[1]
-        chat_id = query.message.chat.id
         if mode in ["strict", "normal", "fun"]:
-            group_automode[chat_id] = mode
-            await query.edit_message_text(f"⚙️ Auto mode set to: {mode}")
-        else:
-            await query.edit_message_text("Invalid mode.")
+            group_automode[query.message.chat.id] = mode
+            await query.edit_message_text(f"⚙️ Mode: {mode}")
     elif data.startswith("ttt_"):
         _, game_id, pos = data.split("_")
         pos = int(pos)
@@ -563,43 +494,36 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("Not your turn!", show_alert=True)
             return
         if game["board"][pos] != " ":
-            await query.answer("Already taken!", show_alert=True)
+            await query.answer("Taken!", show_alert=True)
             return
         symbol = "X" if game["turn"] == 0 else "O"
         game["board"][pos] = symbol
-        win_patterns = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
+        win = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
         winner = None
-        for pattern in win_patterns:
-            if game["board"][pattern[0]] == game["board"][pattern[1]] == game["board"][pattern[2]] != " ":
+        for p in win:
+            if game["board"][p[0]] == game["board"][p[1]] == game["board"][p[2]] != " ":
                 winner = game["turn"]
                 break
         if winner is not None:
-            winner_user = await context.bot.get_chat_member(game["chat_id"], game["players"][winner])
-            await query.edit_message_text(f"🎉 {winner_user.user.mention_html()} wins!", parse_mode="HTML")
+            u = await context.bot.get_chat_member(game["chat_id"], game["players"][winner])
+            await query.edit_message_text(f"🎉 {u.user.mention_html()} wins!", parse_mode="HTML")
             del active_games[game_id]
-            return
-        if " " not in game["board"]:
-            await query.edit_message_text("🤝 It's a draw!")
+        elif " " not in game["board"]:
+            await query.edit_message_text("🤝 Draw!")
             del active_games[game_id]
-            return
-        game["turn"] = 1 - game["turn"]
-        next_user = await context.bot.get_chat_member(game["chat_id"], game["players"][game["turn"]])
-        markup = InlineKeyboardMarkup([
-            [InlineKeyboardButton(game["board"][0] or " ", callback_data=f"ttt_{game_id}_0"),
-             InlineKeyboardButton(game["board"][1] or " ", callback_data=f"ttt_{game_id}_1"),
-             InlineKeyboardButton(game["board"][2] or " ", callback_data=f"ttt_{game_id}_2")],
-            [InlineKeyboardButton(game["board"][3] or " ", callback_data=f"ttt_{game_id}_3"),
-             InlineKeyboardButton(game["board"][4] or " ", callback_data=f"ttt_{game_id}_4"),
-             InlineKeyboardButton(game["board"][5] or " ", callback_data=f"ttt_{game_id}_5")],
-            [InlineKeyboardButton(game["board"][6] or " ", callback_data=f"ttt_{game_id}_6"),
-             InlineKeyboardButton(game["board"][7] or " ", callback_data=f"ttt_{game_id}_7"),
-             InlineKeyboardButton(game["board"][8] or " ", callback_data=f"ttt_{game_id}_8")]
-        ])
-        await query.edit_message_text(
-            f"🎮 Tic-Tac-Toe\nTurn: {next_user.user.mention_html()} ({'X' if game['turn'] == 0 else 'O'})",
-            reply_markup=markup,
-            parse_mode="HTML"
-        )
+        else:
+            game["turn"] = 1 - game["turn"]
+            next_u = await context.bot.get_chat_member(game["chat_id"], game["players"][game["turn"]])
+            markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton(game["board"][i] or " ", callback_data=f"ttt_{game_id}_{i}") for i in range(3)],
+                [InlineKeyboardButton(game["board"][i] or " ", callback_data=f"ttt_{game_id}_{i}") for i in range(3,6)],
+                [InlineKeyboardButton(game["board"][i] or " ", callback_data=f"ttt_{game_id}_{i}") for i in range(6,9)]
+            ])
+            await query.edit_message_text(
+                f"🎮 Tic-Tac-Toe\nTurn: {next_u.user.mention_html()} ({'X' if game['turn']==0 else 'O'})",
+                reply_markup=markup,
+                parse_mode="HTML"
+            )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -612,9 +536,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0:
-        return
-    if not group_admin_mode.get(chat_id, False):
+    if chat_id > 0 or not group_admin_mode.get(chat_id, False):
         return
     status = update.chat_member.difference.get("status")
     if not status:
@@ -622,30 +544,29 @@ async def member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     old_status, new_status = status
     user = update.chat_member.new_chat_member.user
     if new_status == "member" and old_status is None:
-        msg = group_welcome_msg.get(chat_id, "Welcome {user}!")
-        msg = msg.replace("{user}", user.mention_html())
+        msg = group_welcome_msg.get(chat_id, "Welcome {user}!").replace("{user}", user.mention_html())
         await context.bot.send_message(chat_id, msg, parse_mode="HTML")
     elif new_status in ["left", "kicked"] and old_status == "member":
-        msg = group_leaving_msg.get(chat_id, "Goodbye {user}!")
-        msg = msg.replace("{user}", user.mention_html())
+        msg = group_leaving_msg.get(chat_id, "Goodbye {user}!").replace("{user}", user.mention_html())
         await context.bot.send_message(chat_id, msg, parse_mode="HTML")
 
 def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
+    # Private commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("addtogroup", addtogroup))
     app.add_handler(CommandHandler("newchat", newchat))
     app.add_handler(CommandHandler("clearchat", newchat))
-    app.add_handler(CommandHandler("incognitomode", lambda u, c: incognitomode.update({u.effective_user.id: not incognitomode.get(u.effective_user.id, False)}) or u.message.reply_text(f"{'❌' if incognitomode.get(u.effective_user.id, False) else '💾'} Incognito mode {'OFF' if incognitomode.get(u.effective_user.id, False) else 'ON'}.")))
+    app.add_handler(CommandHandler("incognitomode", lambda u,c: (incognitomode.update({u.effective_user.id: not incognitomode.get(u.effective_user.id, False)}), u.message.reply_text(f"{'❌' if incognitomode.get(u.effective_user.id, False) else '💾'} Incognito {'OFF' if incognitomode.get(u.effective_user.id, False) else 'ON'}."))[1]))
     app.add_handler(CommandHandler("chathistory", chathistory))
     app.add_handler(CommandHandler("switchmodel", switchmodel))
     app.add_handler(CommandHandler("instructions", instructions))
 
+    # Group commands
     app.add_handler(CommandHandler("ban", ban))
     app.add_handler(CommandHandler("unban", unban))
-    app.add_handler(CommandHandler("tempban", tempban))
     app.add_handler(CommandHandler("mute", mute))
     app.add_handler(CommandHandler("unmute", unmute))
     app.add_handler(CommandHandler("warning", warning))
@@ -664,7 +585,18 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(ChatMemberHandler(member_handler, ChatMemberHandler.CHAT_MEMBER))
 
-    app.run_polling()
+    # Webhook setup for Render
+    PORT = int(os.environ.get("PORT", "10000"))
+    RENDER_EXTERNAL_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
+    if not RENDER_EXTERNAL_URL:
+        raise RuntimeError("RENDER_EXTERNAL_URL not set")
+    WEBHOOK_URL = f"{RENDER_EXTERNAL_URL}/webhook"
+    app.bot.set_webhook(url=WEBHOOK_URL)
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=WEBHOOK_URL
+    )
 
 if __name__ == "__main__":
     main()
