@@ -857,7 +857,7 @@ async def main():
         full_webhook_url = f"{RENDER_URL}{webhook_path}"
 
         logger.info(f"Setting webhook to {full_webhook_url}...")
-        await app.bot..set_webhook(
+        await app.bot.set_webhook(
             url=full_webhook_url, 
             allowed_updates=Update.ALL_TYPES
         )
