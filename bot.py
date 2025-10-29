@@ -657,7 +657,8 @@ async def set_auto_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     if not await is_admin(chat_id, user_id, context):
-        await update.message.reply_text("You're not an admin,.
+        await update.message.reply_text("You're not an admin, my guy.")
+
         return
         
     if not context.args:
