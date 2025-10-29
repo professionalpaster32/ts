@@ -26,20 +26,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+available_models = []
+DEFAULT_MODEL = "gemini-pro"
+
 try:
     genai.configure(api_key=GEMINI_API_KEY)
 except Exception as e:
     logger.error(f"Failed to configure Gemini: {e}")
 
+def fetch_available_models():
+    global available_models, DEFAULT_MODEL
+    if not GEMINI_API_KEY:
+        logger.error("No GEMINI_API_KEY found. Using fallback model list.")
+        available_models = [DEFAULT_MODEL]
+        return
+
+    try:
+        models_list = genai.list_models()
+        valid_models = [m.name.replace('models/', '') for m in models_list if 'generateContent' in m.supported_generation_methods]
+        
+        if valid_models:
+            available_models = valid_models
+            DEFAULT_MODEL = available_models[0]
+        else:
+            available_models = [DEFAULT_MODEL]
+            
+        logger.info(f"Available models set to: {available_models}")
+        logger.info(f"Default model set to: {DEFAULT_MODEL}")
+    except Exception as e:
+        logger.error(f"Failed to fetch models: {e}. Falling back to default.")
+        available_models = [DEFAULT_MODEL]
+
 user_states = {}
 group_states = {}
 tictactoe_games = {}
+
+CENSORED_WORDS = [
+    'nigger', 'nigga', 'faggot', 'fag', 'cunt', 'bitch', 
+    'dick', 'pussy', 'motherfucker', 'mf', 'fuck', 'shit'
+]
 
 def get_user_state(user_id):
     if user_id not in user_states:
         user_states[user_id] = {
             "history": [],
-            "model": "gemini-flash",
+            "model": DEFAULT_MODEL,
             "instructions": "You are a helpful assistant.",
             "incognito": False,
         }
@@ -97,9 +128,8 @@ Example:
 /instructions Talk like an Member of Gen z
 
 /switchmodel
-⚙️ Switch between models:
-`gemini-flash` ⚡ (fastest)
-`gemini-pro` 🧩 (smarter)
+⚙️ Switch between available Gemini models.
+Type /switchmodel to see a list of models you can use.
 Example:
 /switchmodel gemini-pro
 
@@ -187,21 +217,23 @@ async def switch_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state = get_user_state(user_id)
     
     if not context.args:
+        models_list_text = "\n".join([f"`{model}`" for model in available_models])
         await update.message.reply_text(
             f"Your current model is: `{state['model']}`\n\n"
             "To switch, use:\n"
-            "`/switchmodel gemini-flash` ⚡\n"
-            "`/switchmodel gemini-pro` 🧩",
+            f"{models_list_text}\n\n"
+            "Example:\n"
+            f"`/switchmodel {available_models[0] if available_models else 'gemini-pro'}`",
             parse_mode=ParseMode.MARKDOWN
         )
         return
 
     model_name = context.args[0].lower()
-    if model_name in ["gemini-pro", "gemini-flash"]:
+    if model_name in available_models:
         state["model"] = model_name
         await update.message.reply_text(f"Bet. Switched model to `{state['model']}`.")
     else:
-        await update.message.reply_text("Nah, that's not a valid model. Use `gemini-pro` or `gemini-flash`.")
+        await update.message.reply_text("Nah, that's not a valid model. Type `/switchmodel` to see the list.")
 
 async def set_instructions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -229,11 +261,18 @@ async def handle_gemini_chat(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("Sry, the admin hasn't set up the Gemini API key. Can't chat rn. 😬")
         return
 
+    current_model = state["model"]
+    if current_model not in available_models:
+        logger.warning(f"User {user_id} had invalid model {current_model}. Reverting to default.")
+        current_model = DEFAULT_MODEL
+        state["model"] = DEFAULT_MODEL
+        await update.message.reply_text(f"Yo, your selected model wasn't valid. I switched you back to `{DEFAULT_MODEL}` for this chat.", parse_mode=ParseMode.MARKDOWN)
+
     try:
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
         
         model = genai.GenerativeModel(
-            model_name=state["model"],
+            model_name=current_model,
             system_instruction=state["instructions"]
         )
         
@@ -293,11 +332,11 @@ Example: `/mute @user 30 minutes`
 
 👑 **Role Management**
 
-`/role {user} {role}`
-🎭 Assign a custom text role (e.g., VIP).
+`/role {user}`
+🎭 Promotes a user to admin with standard permissions.
 
 `/removerole {user}`
-❌ Removes a user’s assigned role.
+❌ Demotes an admin back to a regular member.
 
 ---
 
@@ -305,9 +344,9 @@ Example: `/mute @user 30 minutes`
 
 `/setautomode {mode}`
 ⚙️ Set moderation mode:
-`strict` 🔒 (auto-ban on 3 warnings)
-`normal` ⚖️ (warn only)
-`fun` 🎉 (light moderation)
+`strict` 🔒 (auto-ban on 3 warnings, auto-censor)
+`normal` ⚖️ (warn only, auto-censor)
+`fun` 🎉 (light moderation, no censor)
 
 `/removeautomode`
 🚫 Disables auto moderation (sets to normal).
@@ -349,27 +388,26 @@ async def help_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_target_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_user = None
     reason_parts = []
-
+    
     if update.message.reply_to_message:
         target_user = update.message.reply_to_message.from_user
         reason_parts = context.args
-    elif context.args:
-        username = context.args[0]
-        if username.startswith('@'):
-            username = username[1:]
-        
-        if update.message.entities:
-            for entity in update.message.entities:
-                if entity.type == 'mention':
-                    username = update.message.text[entity.offset+1:entity.offset+entity.length]
-                if entity.type == 'text_mention':
-                    target_user = entity.user
-                    reason_parts = context.args[1:]
-                    break
-        
-        if not target_user and not update.message.reply_to_message:
-            await update.message.reply_text("Please reply to the user you want to action.")
-            return None, ""
+    elif update.message.entities and context.args:
+        for entity in update.message.entities:
+            if entity.type == 'text_mention':
+                target_user = entity.user
+                mention_length = entity.length
+                reason_text = update.message.text[entity.offset + mention_length:].strip()
+                reason_parts = reason_text.split()
+                break
+            elif entity.type == 'mention':
+                # This is harder, as username != ID.
+                # For simplicity, we'll mostly rely on reply and text_mention.
+                pass
+                
+    if not target_user:
+        await update.message.reply_text("Please reply to the user you want to action, or tag them in the command.")
+        return None, ""
 
     reason = " ".join(reason_parts) if reason_parts else "No reason provided."
     return target_user, reason
@@ -428,18 +466,18 @@ async def temp_ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You're not an admin, my guy.")
         return
 
-    target_user, _ = await get_target_user(update, context)
+    target_user, reason_str = await get_target_user(update, context)
     if not target_user:
         return
         
-    args = context.args[1:]
-    if len(args) < 2:
-        await update.message.reply_text("Usage: `/tempban {user} {time} {reason}`\nExample: `/tempban @user 2 days spam`")
+    reason_parts = reason_str.split()
+    if len(reason_parts) < 2:
+        await update.message.reply_text("Usage: `/tempban {time} {reason}` (as a reply or by tagging)\nExample: `/tempban @user 2 days spam`")
         return
     
-    duration_str = f"{args[0]} {args[1]}"
+    duration_str = f"{reason_parts[0]} {reason_parts[1]}"
     duration = parse_duration(duration_str)
-    reason = " ".join(args[2:]) if len(args) > 2 else "No reason provided."
+    reason = " ".join(reason_parts[2:]) if len(reason_parts) > 2 else "No reason provided."
     
     if not duration:
         await update.message.reply_text("Weird time format. Use: `10 minutes`, `2 days`, `1 week`")
@@ -462,16 +500,16 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You're not an admin, my guy.")
         return
 
-    target_user, _ = await get_target_user(update, context)
+    target_user, reason_str = await get_target_user(update, context)
     if not target_user:
         return
         
-    args = context.args[1:]
-    if len(args) < 2:
-        await update.message.reply_text("Usage: `/mute {user} {time}`\nExample: `/mute @user 30 minutes`")
+    reason_parts = reason_str.split()
+    if len(reason_parts) < 2:
+        await update.message.reply_text("Usage: `/mute {time}` (as a reply or by tagging)\nExample: `/mute @user 30 minutes`")
         return
         
-    duration_str = f"{args[0]} {args[1]}"
+    duration_str = f"{reason_parts[0]} {reason_parts[1]}"
     duration = parse_duration(duration_str)
     
     if not duration:
@@ -580,14 +618,10 @@ async def check_warnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     group = get_group_state(chat_id)
     
     target_user = None
-    if context.args:
+    if update.message.reply_to_message:
         if not await is_admin(chat_id, update.effective_user.id, context):
-            await update.message.reply_text("You can only check your own warnings. Admins can check others.")
+            await update.message.reply_text("You can only check your own warnings. Admins can check others by replying.")
             return
-        
-        if not update.message.reply_to_message:
-             await update.message.reply_text("Admin, please reply to the user to check their warnings.")
-             return
         target_user = update.message.reply_to_message.from_user
     else:
         target_user = update.effective_user
@@ -601,28 +635,7 @@ async def check_warnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mention = target_user.mention_markdown()
         await update.message.reply_text(f"{mention} has {warnings}/3 warnings. 📋", parse_mode=ParseMode.MARKDOWN)
 
-async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
-    
-    if not await is_admin(chat_id, user_id, context):
-        await update.message.reply_text("You're not an admin, my guy.")
-        return
-
-    target_user, role = await get_target_user(update, context)
-    if not target_user:
-        return
-        
-    if not role:
-        await update.message.reply_text("Usage: `/role {user} {role_name}`")
-        return
-        
-    group = get_group_state(chat_id)
-    group["roles"][str(target_user.id)] = role
-    mention = target_user.mention_markdown()
-    await update.message.reply_text(f"Role updated: {mention} is now a {role}! 🎭", parse_mode=ParseMode.MARKDOWN)
-
-async def remove_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def promote_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     
@@ -634,14 +647,50 @@ async def remove_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not target_user:
         return
         
-    group = get_group_state(chat_id)
-    target_id_str = str(target_user.id)
+    try:
+        await context.bot.promote_chat_member(
+            chat_id=chat_id,
+            user_id=target_user.id,
+            can_change_info=True,
+            can_delete_messages=True,
+            can_invite_users=True,
+            can_restrict_members=True,
+            can_pin_messages=True,
+            can_manage_topics=True
+        )
+        mention = target_user.mention_markdown()
+        await update.message.reply_text(f"Bet. {mention} is now an admin. 👑", parse_mode=ParseMode.MARKDOWN)
+    except Exception as e:
+        await update.message.reply_text(f"Couldn't promote user. {e}")
+
+async def demote_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
     
-    if target_id_str in group["roles"]:
-        del group["roles"][target_id_str]
+    if not await is_admin(chat_id, user_id, context):
+        await update.message.reply_text("You're not an admin, my guy.")
+        return
+
+    target_user, _ = await get_target_user(update, context)
+    if not target_user:
+        return
         
-    mention = target_user.mention_markdown()
-    await update.message.reply_text(f"Role removed for {mention}. ❌", parse_mode=ParseMode.MARKDOWN)
+    try:
+        await context.bot.promote_chat_member(
+            chat_id=chat_id,
+            user_id=target_user.id,
+            can_change_info=False,
+            can_delete_messages=False,
+            can_invite_users=False,
+            can_restrict_members=False,
+            can_pin_messages=False,
+            can_manage_topics=False,
+            can_promote_members=False
+        )
+        mention = target_user.mention_markdown()
+        await update.message.reply_text(f"Aight. {mention} is no longer an admin. ❌", parse_mode=ParseMode.MARKDOWN)
+    except Exception as e:
+        await update.message.reply_text(f"Couldn't demote user. {e}")
 
 async def set_auto_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -786,10 +835,46 @@ async def leaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.warning(f"Failed to send leaving message: {e}")
 
+async def censor_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    group = get_group_state(chat_id)
+    
+    if group["automode"] not in ["strict", "normal"]:
+        return
+        
+    if await is_admin(chat_id, user_id, context):
+        return
+        
+    message_text = update.message.text.lower()
+    
+    for word in CENSORED_WORDS:
+        if word in message_text:
+            try:
+                await update.message.delete()
+                mention = update.effective_user.mention_markdown()
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"{mention}, please watch your language. Your message was deleted for using a censored word.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            except Exception as e:
+                logger.warning(f"Failed to delete/warn for censored message: {e}")
+            return
+
 def main():
     if not TELEGRAM_BOT_TOKEN:
         logger.critical("TELEGRAM_BOT_TOKEN env var not set.")
         return
+        
+    if not GEMINI_API_KEY:
+        logger.critical("GEMINI_API_KEY env var not set. Bot cannot start.")
+        return
+
+    fetch_available_models()
         
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     
@@ -815,14 +900,16 @@ def main():
     app.add_handler(CommandHandler("warning", warn_user, filters=group_filter))
     app.add_handler(CommandHandler("removewarnings", remove_warnings, filters=group_filter))
     app.add_handler(CommandHandler("checkwarnings", check_warnings, filters=group_filter))
-    app.add_handler(CommandHandler("role", set_role, filters=group_filter))
-    app.add_handler(CommandHandler("removerole", remove_role, filters=group_filter))
+    app.add_handler(CommandHandler("role", promote_user, filters=group_filter))
+    app.add_handler(CommandHandler("removerole", demote_user, filters=group_filter))
     app.add_handler(CommandHandler("setautomode", set_auto_mode, filters=group_filter))
     app.add_handler(CommandHandler("removeautomode", remove_auto_mode, filters=group_filter))
     app.add_handler(CommandHandler("welcomemessage", set_welcome, filters=group_filter))
     app.add_handler(CommandHandler("leavingmessage", set_leaving, filters=group_filter))
     app.add_handler(CommandHandler("poll", poll_command, filters=group_filter))
     app.add_handler(CommandHandler("tictactoe", tictactoe_command, filters=group_filter))
+    
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & group_filter, censor_messages))
     
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_handler))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, leaving_handler))
@@ -850,5 +937,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
