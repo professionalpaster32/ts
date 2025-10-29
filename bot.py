@@ -658,7 +658,6 @@ async def set_auto_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if not await is_admin(chat_id, user_id, context):
         await update.message.reply_text("You're not an admin, my guy.")
-
         return
         
     if not context.args:
@@ -852,13 +851,13 @@ async def main():
     if not RENDER_URL:
         logger.warning("RENDER_URL env var not set. Falling back to polling for local dev.")
         logger.info("Starting bot with polling...")
-        app.run_polling()
+        await app.run_polling() # <-- Fixed missing await
     else:
         webhook_path = f"/{TELEGRAM_BOT_TOKEN}"
         full_webhook_url = f"{RENDER_URL}{webhook_path}"
 
         logger.info(f"Setting webhook to {full_webhook_url}...")
-        await app.bot.set_webhook(
+        await app.bot..set_webhook(
             url=full_webhook_url, 
             allowed_updates=Update.ALL_TYPES
         )
@@ -871,5 +870,7 @@ async def main():
         )
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+
 
