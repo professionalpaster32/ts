@@ -817,7 +817,7 @@ def main():
     app.add_handler(CommandHandler("checkwarnings", check_warnings, filters=group_filter))
     app.add_handler(CommandHandler("role", set_role, filters=group_filter))
     app.add_handler(CommandHandler("removerole", remove_role, filters=group_filter))
-    app.add_to_group(CommandHandler("setautomode", set_auto_mode, filters=group_filter))
+    app.add_handler(CommandHandler("setautomode", set_auto_mode, filters=group_filter))
     app.add_handler(CommandHandler("removeautomode", remove_auto_mode, filters=group_filter))
     app.add_handler(CommandHandler("welcomemessage", set_welcome, filters=group_filter))
     app.add_handler(CommandHandler("leavingmessage", set_leaving, filters=group_filter))
@@ -850,4 +850,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
