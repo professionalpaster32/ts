@@ -17,7 +17,6 @@ from telegram.ext import (
     ChatMemberHandler,
 )
 
-# --- Config ---
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -32,12 +31,9 @@ try:
 except Exception as e:
     logger.error(f"Failed to configure Gemini: {e}")
 
-# --- Bot State (In-Memory) ---
 user_states = {}
 group_states = {}
 tictactoe_games = {}
-
-# --- Helper Functions ---
 
 def get_user_state(user_id):
     if user_id not in user_states:
@@ -85,8 +81,6 @@ def parse_duration(text: str) -> datetime.timedelta | None:
     if unit in ["month", "months"]:
         return datetime.timedelta(days=value * 30)
     return None
-
-# --- Private Chat (Gemini) Commands ---
 
 PRIVATE_HELP_TEXT = """
 hello, how can i assist you?
@@ -145,7 +139,7 @@ async def help_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(PRIVATE_HELP_TEXT, parse_mode=ParseMode.MARKDOWN)
 
 async def add_to_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    bot_username = context.bot.username
+    bot_username = (await context.bot.get_me()).username
     url = f"https://t.me/{bot_username}?startgroup=true"
     keyboard = InlineKeyboardMarkup.from_button(
         InlineKeyboardButton(text="Click to Add to Group", url=url)
@@ -254,9 +248,6 @@ async def handle_gemini_chat(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception as e:
         logger.error(f"Gemini API error: {e}")
         await update.message.reply_text(f"Oof, something went wrong with the AI. Error: {e}")
-
-
-# --- Group Chat (Admin) Commands ---
 
 GROUP_HELP_TEXT = """
 🛡️ **Admin Command Mode** 🛡️
@@ -437,11 +428,11 @@ async def temp_ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You're not an admin, my guy.")
         return
 
-    target_user, _ = await get_target_user(update, context) # Reason is part of args
+    target_user, _ = await get_target_user(update, context)
     if not target_user:
         return
         
-    args = context.args[1:] # Skip the user
+    args = context.args[1:]
     if len(args) < 2:
         await update.message.reply_text("Usage: `/tempban {user} {time} {reason}`\nExample: `/tempban @user 2 days spam`")
         return
@@ -559,7 +550,7 @@ async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         until_date = datetime.datetime.now() + datetime.timedelta(days=1)
         try:
             await context.bot.ban_chat_member(chat_id=chat_id, user_id=target_user.id, until_date=until_date)
-            group["warnings"][target_id_str] = 0 # Reset warnings after ban
+            group["warnings"][target_id_str] = 0
         except Exception as e:
             await update.message.reply_text(f"Couldn't auto-ban user. {e}")
 
@@ -747,9 +738,6 @@ async def poll_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def tictactoe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("TicTacToe feature is complex and under construction! 🚧")
 
-
-# --- Status Update Handlers ---
-
 async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     group = get_group_state(chat_id)
@@ -798,16 +786,13 @@ async def leaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.warning(f"Failed to send leaving message: {e}")
 
-# --- Main Function ---
-
-async def main():
+def main():
     if not TELEGRAM_BOT_TOKEN:
         logger.critical("TELEGRAM_BOT_TOKEN env var not set.")
         return
         
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     
-    # Private Chat Handlers
     private_filter = filters.ChatType.PRIVATE
     app.add_handler(CommandHandler("start", start_private, filters=private_filter))
     app.add_handler(CommandHandler("help", help_private, filters=private_filter))
@@ -820,7 +805,6 @@ async def main():
     app.add_handler(CommandHandler("instructions", set_instructions, filters=private_filter))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & private_filter, handle_gemini_chat))
     
-    # Group Chat Handlers
     group_filter = filters.ChatType.GROUP | filters.ChatType.SUPERGROUP
     app.add_handler(CommandHandler("help", help_group, filters=group_filter))
     app.add_handler(CommandHandler("ban", ban_user, filters=group_filter))
@@ -840,34 +824,29 @@ async def main():
     app.add_handler(CommandHandler("poll", poll_command, filters=group_filter))
     app.add_handler(CommandHandler("tictactoe", tictactoe_command, filters=group_filter))
     
-    # Status Handlers
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_handler))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, leaving_handler))
 
-    # --- RENDER WEBHOOK SETUP ---
     PORT = int(os.environ.get('PORT', 8443))
     RENDER_URL = os.environ.get('RENDER_URL') 
 
     if not RENDER_URL:
         logger.warning("RENDER_URL env var not set. Falling back to polling for local dev.")
         logger.info("Starting bot with polling...")
-        await app.run_polling() # <-- Fixed missing await
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
     else:
         webhook_path = f"/{TELEGRAM_BOT_TOKEN}"
         full_webhook_url = f"{RENDER_URL}{webhook_path}"
 
-        logger.info(f"Setting webhook to {full_webhook_url}...")
-        await app.bot.set_webhook(
-            url=full_webhook_url, 
+        logger.info(f"Starting webhook server on 0.0.0.0:{PORT}...")
+        
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=webhook_path,
+            webhook_url=full_webhook_url,
             allowed_updates=Update.ALL_TYPES
         )
 
-        logger.info(f"Starting webhook server on 0.0.0.0:{PORT}...")
-        await app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=webhook_path
-        )
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
