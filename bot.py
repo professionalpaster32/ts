@@ -35,7 +35,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- Data Stores ---
 user_chats: Dict[int, List[Dict]] = {}
 user_instructions: Dict[int, str] = {}
 user_models: Dict[int, str] = {}
@@ -52,15 +51,29 @@ DEFAULT_INSTRUCTIONS = "You are a helpful assistant."
 DEFAULT_MODEL = "gemini-2.5-flash"
 ALLOWED_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"]
 
-# --- Helpers ---
-def is_admin(chat_id: int, user_id: int, bot) -> bool:
+async def _is_admin(chat_id: int, user_id: int, bot) -> bool:
     if chat_id > 0:
         return True
     try:
-        member = bot.get_chat_member(chat_id, user_id)
+        member = await bot.get_chat_member(chat_id, user_id)
         return member.status in ["administrator", "creator"]
     except:
         return False
+
+async def _resolve_user(chat_id: int, target: str, bot):
+    if target.startswith("@"):
+        try:
+            user = await bot.get_chat_member(chat_id, target)
+            return user.user.id
+        except:
+            await bot.send_message(chat_id, "User not found.")
+            return None
+    else:
+        try:
+            return int(target)
+        except ValueError:
+            await bot.send_message(chat_id, "Invalid user ID or username.")
+            return None
 
 def parse_duration(duration_str: str) -> Optional[timedelta]:
     match = re.match(r"(\d+)\s*(day|week|month|minute|hour)s?", duration_str.lower())
@@ -82,70 +95,32 @@ def parse_duration(duration_str: str) -> Optional[timedelta]:
 
 async def send_gemini_response(update: Update, context: ContextTypes.DEFAULT_TYPE, prompt: str):
     user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
-
     model_name = user_models.get(user_id, DEFAULT_MODEL)
     instructions = user_instructions.get(user_id, DEFAULT_INSTRUCTIONS)
-
-    if incognito_mode.get(user_id, False):
-        chat_history = []
-    else:
-        chat_history = user_chats.get(user_id, [])
-        chat_history.append({"role": "user", "parts": [prompt]})
-
-    model = genai.GenerativeModel(model_name, system_instruction=instructions)
+    full_prompt = f"{instructions}\n\nUser: {prompt}"
+    model = genai.GenerativeModel(model_name)
     try:
         if incognito_mode.get(user_id, False):
-            response = await model.generate_content_async(prompt)
+            response = await model.generate_content_async(full_prompt)
         else:
+            chat_history = user_chats.get(user_id, [])
             chat = model.start_chat(history=chat_history)
-            response = await chat.send_message_async(prompt)
+            response = await chat.send_message_async(full_prompt)
             user_chats[user_id] = chat.history
         await update.message.reply_text(response.text)
     except Exception as e:
         logger.error(f"Gemini error: {e}")
         await update.message.reply_text("❌ Error generating response. Try again.")
 
-# --- Command Handlers ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "hello, how can i assist you?\n"
-        "/help\n"
-        "📘 Shows all available commands and what they do.\n"
-        "Use this anytime if you’re lost!\n\n"
-        "/addtogroup\n"
-        "👥 Authorizes the bot to work in your group — so everyone can chat with Gemini together!\n\n"
-        "/instructions\n"
-        "🧠 Add or change custom system instructions for Gemini.\n"
-        "Example:\n"
-        "/instructions Talk like an Member of Gen z\n\n"
-        "/switchmodel\n"
-        "⚙️ Switch between models:\n\n"
-        "gemini-2.5-flash ⚡ (fastest)\n\n"
-        "gemini-2.5-pro 🧩 (for long-horizontal tasks)\n"
-        "Example:\n"
-        "/switchmodel gemini-2.5-pro\n\n"
-        "💸 Our bot is 100% FREE — no billing or pricing required!\n"
-        "Just chat, code, and create.\n\n"
-        "💬 Chat Control Commands\n\n"
-        "🆕 /newchat\n"
-        "Starts a brand-new conversation — clears all context and memory.\n"
-        "Use this when you want a clean slate.\n\n"
-        "🧹 /clearchat\n"
-        "Same as /newchat, just another way to reset the chat.\n\n"
-        "🕵️ /incognitomode\n"
-        "Turns on/off private chat mode.\n"
-        "When ON → ❌ your messages won’t be saved (no memory).\n"
-        "When OFF → 💾 chat memory resumes normally.\n\n"
-        "📜 /chathistory\n"
-        "Shows your current chat memory with Gemini.\n"
-        "Lets you view what’s been remembered in your conversation.\n\n"
-        "🚀 Overall\n"
-        "✅  AI assistant\n"
-        "✅ Generate and debug code\n"
-        "✅ Work in groups with /addtogroup\n"
-        "✅ Support model switching & system instructions\n"
-        "✅ Absolutely free — no billing required"
+        "/help — shows all commands\n"
+        "/newchat — clear memory\n"
+        "/chathistory — view recent messages\n"
+        "/addtogroup — authorize in groups\n"
+        "/instructions — set custom behavior\n"
+        "/switchmodel — choose AI model"
     )
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -154,47 +129,53 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def addtogroup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if chat_id > 0:
-        await update.message.reply_text("Use this command in a group to authorize the bot.")
+        await update.message.reply_text("👥 Use this command in a group to authorize the bot.")
         return
-    group_admin_mode[chat_id] = True
-    await update.message.reply_text("✅ Bot authorized for group use! Admin commands now active.")
+    keyboard = [
+        [InlineKeyboardButton("✅ Authorize Bot for This Group", callback_data=f"auth_{chat_id}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "🔐 Group Authorization Required\n"
+        "Only group admins can enable bot features.\n"
+        "Tap below to confirm:",
+        reply_markup=reply_markup
+    )
 
-# --- Private Chat AI Commands ---
 async def newchat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_chats[user_id] = []
-    await update.message.reply_text("🆕 New chat started! Memory cleared.")
-
-async def clearchat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await newchat(update, context)
-
-async def incognitomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    current = incognito_mode.get(user_id, False)
-    incognito_mode[user_id] = not current
-    status = "ON" if not current else "OFF"
-    icon = "❌" if not current else "💾"
-    await update.message.reply_text(f"{icon} Incognito mode {status}.")
+    await update.message.reply_text("🆕 Chat history cleared.")
 
 async def chathistory(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     history = user_chats.get(user_id, [])
     if not history:
-        await update.message.reply_text("📜 No chat history yet.")
+        await update.message.reply_text("📜 No chat history.")
         return
-    text = "\n".join([f"{'You' if msg['role'] == 'user' else 'Gemini'}: {msg['parts'][0]}" for msg in history])
+    messages = []
+    for msg in history[-10:]:
+        role = "You" if msg["role"] == "user" else "Gemini"
+        content = msg["parts"][0] if isinstance(msg["parts"], list) else str(msg["parts"])
+        messages.append(f"{role}: {content}")
+    text = "\n\n".join(messages)
     if len(text) > 4000:
         text = text[-4000:]
-    await update.message.reply_text(f"📜 Chat History:\n\n{text}")
+    await update.message.reply_text(f"📜 Recent Chat:\n\n{text}")
 
 async def switchmodel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if not context.args:
-        await update.message.reply_text("Usage: /switchmodel <model_name>\nAvailable: gemini-2.5-flash, gemini-2.5-pro")
+        keyboard = [
+            [InlineKeyboardButton("gemini-2.5-flash ⚡", callback_data="model_gemini-2.5-flash")],
+            [InlineKeyboardButton("gemini-2.5-pro 🧩", callback_data="model_gemini-2.5-pro")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("⚙️ Choose a model:", reply_markup=reply_markup)
         return
     model = context.args[0]
     if model not in ALLOWED_MODELS:
-        await update.message.reply_text("Invalid model. Choose: gemini-2.5-flash or gemini-2.5-pro")
+        await update.message.reply_text("Invalid model. Use /switchmodel without args for options.")
         return
     user_models[user_id] = model
     await update.message.reply_text(f"⚙️ Model switched to {model}")
@@ -208,7 +189,6 @@ async def instructions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_instructions[user_id] = instr
     await update.message.reply_text("🧠 Custom instructions set!")
 
-# --- Group Admin Commands ---
 async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
@@ -217,10 +197,17 @@ async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Usage: /ban <user> <duration>")
         return
     target = context.args[0]
-    duration = " ".join(context.args[1:])
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
+    try:
+        member = await context.bot.get_chat_member(chat_id, user_id)
+        if member.status == "creator":
+            await update.message.reply_text("This user is the owner, I cannot ban this user!")
+            return
+    except:
+        pass
+    duration = " ".join(context.args[1:])
     try:
         await context.bot.ban_chat_member(chat_id, user_id)
         await update.message.reply_text(f"{target}, you have been banned for {duration} from this group!")
@@ -260,6 +247,13 @@ async def tempban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
+    try:
+        member = await context.bot.get_chat_member(chat_id, user_id)
+        if member.status == "creator":
+            await update.message.reply_text("This user is the owner, I cannot ban this user!")
+            return
+    except:
+        pass
     until = datetime.now() + td
     try:
         await context.bot.ban_chat_member(chat_id, user_id, until_date=int(until.timestamp()))
@@ -283,6 +277,13 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
+    try:
+        member = await context.bot.get_chat_member(chat_id, user_id)
+        if member.status == "creator":
+            await update.message.reply_text("This user is the owner, I cannot mute this user!")
+            return
+    except:
+        pass
     until = datetime.now() + td
     try:
         await context.bot.restrict_chat_member(chat_id, user_id, until_date=int(until.timestamp()), can_send_messages=False)
@@ -302,7 +303,6 @@ async def unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id is None:
         return
     try:
-        perms = context.bot.chat_permissions
         await context.bot.restrict_chat_member(
             chat_id, user_id,
             can_send_messages=True,
@@ -327,6 +327,13 @@ async def warning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
+    try:
+        member = await context.bot.get_chat_member(chat_id, user_id)
+        if member.status == "creator":
+            await update.message.reply_text("This user is the owner, I cannot warn this user!")
+            return
+    except:
+        pass
     if chat_id not in group_warnings:
         group_warnings[chat_id] = {}
     if user_id not in group_warnings[chat_id]:
@@ -385,6 +392,13 @@ async def role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = await _resolve_user(chat_id, target, context.bot)
     if user_id is None:
         return
+    try:
+        member = await context.bot.get_chat_member(chat_id, user_id)
+        if member.status == "creator":
+            await update.message.reply_text("This user is the owner, cannot assign role.")
+            return
+    except:
+        pass
     if chat_id not in group_roles:
         group_roles[chat_id] = {}
     group_roles[chat_id][user_id] = role_name
@@ -410,7 +424,13 @@ async def setautomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
-        await update.message.reply_text("Usage: /setautomode <strict|normal|fun>")
+        keyboard = [
+            [InlineKeyboardButton("strict 🔒", callback_data="automode_strict")],
+            [InlineKeyboardButton("normal ⚖️", callback_data="automode_normal")],
+            [InlineKeyboardButton("fun 🎉", callback_data="automode_fun")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("⚙️ Select auto mode:", reply_markup=reply_markup)
         return
     mode = context.args[0].lower()
     if mode not in ["strict", "normal", "fun"]:
@@ -509,7 +529,30 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-    if data.startswith("ttt_"):
+    if data.startswith("auth_"):
+        chat_id = int(data.split("_")[1])
+        user_id = query.from_user.id
+        if await _is_admin(chat_id, user_id, context.bot):
+            group_admin_mode[chat_id] = True
+            await query.edit_message_text("✅ Bot authorized for group use!")
+        else:
+            await query.answer("Only admins can authorize the bot.", show_alert=True)
+    elif data.startswith("model_"):
+        model = data.split("_", 1)[1]
+        if model in ALLOWED_MODELS:
+            user_models[query.from_user.id] = model
+            await query.edit_message_text(f"⚙️ Model switched to {model}")
+        else:
+            await query.edit_message_text("Invalid model.")
+    elif data.startswith("automode_"):
+        mode = data.split("_", 1)[1]
+        chat_id = query.message.chat.id
+        if mode in ["strict", "normal", "fun"]:
+            group_automode[chat_id] = mode
+            await query.edit_message_text(f"⚙️ Auto mode set to: {mode}")
+        else:
+            await query.edit_message_text("Invalid mode.")
+    elif data.startswith("ttt_"):
         _, game_id, pos = data.split("_")
         pos = int(pos)
         if game_id not in active_games:
@@ -587,47 +630,19 @@ async def member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = msg.replace("{user}", user.mention_html())
         await context.bot.send_message(chat_id, msg, parse_mode="HTML")
 
-# --- Helper Functions ---
-async def _is_admin(chat_id: int, user_id: int, bot) -> bool:
-    if chat_id > 0:
-        return True
-    try:
-        member = await bot.get_chat_member(chat_id, user_id)
-        return member.status in ["administrator", "creator"]
-    except:
-        return False
-
-async def _resolve_user(chat_id: int, target: str, bot):
-    if target.startswith("@"):
-        try:
-            user = await bot.get_chat_member(chat_id, target)
-            return user.user.id
-        except:
-            await bot.send_message(chat_id, "User not found.")
-            return None
-    else:
-        try:
-            return int(target)
-        except ValueError:
-            await bot.send_message(chat_id, "Invalid user ID or username.")
-            return None
-
-# --- Main ---
 def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Private Chat Commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("addtogroup", addtogroup))
     app.add_handler(CommandHandler("newchat", newchat))
-    app.add_handler(CommandHandler("clearchat", clearchat))
-    app.add_handler(CommandHandler("incognitomode", incognitomode))
+    app.add_handler(CommandHandler("clearchat", newchat))
+    app.add_handler(CommandHandler("incognitomode", lambda u, c: incognitomode.update({u.effective_user.id: not incognitomode.get(u.effective_user.id, False)}) or u.message.reply_text(f"{'❌' if incognitomode.get(u.effective_user.id, False) else '💾'} Incognito mode {'OFF' if incognitomode.get(u.effective_user.id, False) else 'ON'}.")))
     app.add_handler(CommandHandler("chathistory", chathistory))
     app.add_handler(CommandHandler("switchmodel", switchmodel))
     app.add_handler(CommandHandler("instructions", instructions))
 
-    # Group Admin Commands
     app.add_handler(CommandHandler("ban", ban))
     app.add_handler(CommandHandler("unban", unban))
     app.add_handler(CommandHandler("tempban", tempban))
@@ -645,13 +660,8 @@ def main():
     app.add_handler(CommandHandler("poll", poll))
     app.add_handler(CommandHandler("tictactoe", tictactoe))
 
-    # Callbacks
     app.add_handler(CallbackQueryHandler(button_handler))
-
-    # Message Handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Member Handler
     app.add_handler(ChatMemberHandler(member_handler, ChatMemberHandler.CHAT_MEMBER))
 
     app.run_polling()
