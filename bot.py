@@ -39,7 +39,7 @@ def get_user_state(user_id):
     if user_id not in user_states:
         user_states[user_id] = {
             "history": [],
-            "model": "gemini-1.5-flash",
+            "model": "gemini-flash",
             "instructions": "You are a helpful assistant.",
             "incognito": False,
         }
@@ -98,10 +98,10 @@ Example:
 
 /switchmodel
 ⚙️ Switch between models:
-`gemini-1.5-flash` ⚡ (fastest)
-`gemini-1.5-pro` 🧩 (smarter)
+`gemini-flash` ⚡ (fastest)
+`gemini-pro` 🧩 (smarter)
 Example:
-/switchmodel gemini-1.5-pro
+/switchmodel gemini-pro
 
 💸 Our bot is 100% FREE — no billing or pricing required!
 Just chat, code, and create.
@@ -190,18 +190,18 @@ async def switch_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"Your current model is: `{state['model']}`\n\n"
             "To switch, use:\n"
-            "`/switchmodel gemini-1.5-flash` ⚡\n"
-            "`/switchmodel gemini-1.5-pro` 🧩",
+            "`/switchmodel gemini-flash` ⚡\n"
+            "`/switchmodel gemini-pro` 🧩",
             parse_mode=ParseMode.MARKDOWN
         )
         return
 
     model_name = context.args[0].lower()
-    if model_name in ["gemini-1.5-pro", "gemini-1.5-flash"]:
+    if model_name in ["gemini-pro", "gemini-flash"]:
         state["model"] = model_name
         await update.message.reply_text(f"Bet. Switched model to `{state['model']}`.")
     else:
-        await update.message.reply_text("Nah, that's not a valid model. Use `gemini-1.5-pro` or `gemini-1.5-flash`.")
+        await update.message.reply_text("Nah, that's not a valid model. Use `gemini-pro` or `gemini-flash`.")
 
 async def set_instructions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -817,7 +817,7 @@ def main():
     app.add_handler(CommandHandler("checkwarnings", check_warnings, filters=group_filter))
     app.add_handler(CommandHandler("role", set_role, filters=group_filter))
     app.add_handler(CommandHandler("removerole", remove_role, filters=group_filter))
-    app.add_handler(CommandHandler("setautomode", set_auto_mode, filters=group_filter))
+    app.add_to_group(CommandHandler("setautomode", set_auto_mode, filters=group_filter))
     app.add_handler(CommandHandler("removeautomode", remove_auto_mode, filters=group_filter))
     app.add_handler(CommandHandler("welcomemessage", set_welcome, filters=group_filter))
     app.add_handler(CommandHandler("leavingmessage", set_leaving, filters=group_filter))
@@ -850,3 +850,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
