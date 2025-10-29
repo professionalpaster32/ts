@@ -2,6 +2,7 @@ import os
 import logging
 import re
 import datetime
+import asyncio
 from dotenv import load_dotenv
 import google.generativeai as genai
 from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, Poll
@@ -366,17 +367,10 @@ async def get_target_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if username.startswith('@'):
             username = username[1:]
         
-        # This is tricky. We can't easily get user_id from username without them interacting.
-        # Best way is to rely on reply or mention.
-        # For simplicity, we'll mainly rely on replies.
-        # For /unban, we need to handle ID or username.
-        
-        # Let's check for mentions
         if update.message.entities:
             for entity in update.message.entities:
                 if entity.type == 'mention':
                     username = update.message.text[entity.offset+1:entity.offset+entity.length]
-                    # This still doesn't give us the ID.
                 if entity.type == 'text_mention':
                     target_user = entity.user
                     reason_parts = context.args[1:]
@@ -426,8 +420,6 @@ async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         target_user_id = int(user_input)
     except ValueError:
-        # It's not an ID, maybe a username?
-        # This is unreliable. Best to ask for ID.
         await update.message.reply_text("Please provide a user ID. Unbanning by username is flaky.")
         return
 
@@ -598,18 +590,15 @@ async def check_warnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     target_user = None
     if context.args:
-        # Admin is checking someone else
         if not await is_admin(chat_id, update.effective_user.id, context):
             await update.message.reply_text("You can only check your own warnings. Admins can check others.")
             return
         
-        # This part is hard without a reply. Let's force admins to reply.
         if not update.message.reply_to_message:
              await update.message.reply_text("Admin, please reply to the user to check their warnings.")
              return
         target_user = update.message.reply_to_message.from_user
     else:
-        # User is checking their own
         target_user = update.effective_user
         
     target_id_str = str(target_user.id)
@@ -668,7 +657,7 @@ async def set_auto_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     if not await is_admin(chat_id, user_id, context):
-        await update.message.reply_text("You're not an admin, my guy.")
+        await update.message.reply_text("You're not an admin,.
         return
         
     if not context.args:
@@ -756,9 +745,7 @@ async def poll_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Couldn't create poll. {e}")
 
 async def tictactoe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # This is a placeholder for a complex feature.
     await update.message.reply_text("TicTacToe feature is complex and under construction! 🚧")
-    # A real implementation would use InlineKeyboards and state management.
 
 
 # --- Status Update Handlers ---
@@ -798,7 +785,6 @@ async def leaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.message.left_chat_member
         if user.id == context.bot.id:
             logger.info(f"Bot was removed from group {chat_id}")
-            # Clean up state if needed
             if chat_id in group_states:
                 del group_states[chat_id]
             return
@@ -814,7 +800,7 @@ async def leaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Main Function ---
 
-def main():
+async def main():
     if not TELEGRAM_BOT_TOKEN:
         logger.critical("TELEGRAM_BOT_TOKEN env var not set.")
         return
@@ -858,8 +844,31 @@ def main():
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_handler))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, leaving_handler))
 
-    logger.info("Starting bot...")
-    app.run_polling()
+    # --- RENDER WEBHOOK SETUP ---
+    PORT = int(os.environ.get('PORT', 8443))
+    RENDER_URL = os.environ.get('RENDER_URL') 
+
+    if not RENDER_URL:
+        logger.warning("RENDER_URL env var not set. Falling back to polling for local dev.")
+        logger.info("Starting bot with polling...")
+        app.run_polling()
+    else:
+        webhook_path = f"/{TELEGRAM_BOT_TOKEN}"
+        full_webhook_url = f"{RENDER_URL}{webhook_path}"
+
+        logger.info(f"Setting webhook to {full_webhook_url}...")
+        await app.bot.set_webhook(
+            url=full_webhook_url, 
+            allowed_updates=Update.ALL_TYPES
+        )
+
+        logger.info(f"Starting webhook server on 0.0.0.0:{PORT}...")
+        await app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=webhook_path
+        )
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
