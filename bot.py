@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-from telegram import Update, User, ChatMember, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -18,7 +18,6 @@ from telegram.ext import (
 )
 from dotenv import load_dotenv
 import google.generativeai as genai
-import asyncio
 
 load_dotenv()
 
@@ -54,11 +53,11 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 ALLOWED_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"]
 
 # --- Helpers ---
-def is_admin(chat_id: int, user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+def is_admin(chat_id: int, user_id: int, bot) -> bool:
     if chat_id > 0:
         return True
     try:
-        member = context.bot.get_chat_member(chat_id, user_id)
+        member = bot.get_chat_member(chat_id, user_id)
         return member.status in ["administrator", "creator"]
     except:
         return False
@@ -212,27 +211,16 @@ async def instructions(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- Group Admin Commands ---
 async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if len(context.args) < 2:
         await update.message.reply_text("Usage: /ban <user> <duration>")
         return
     target = context.args[0]
     duration = " ".join(context.args[1:])
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     try:
         await context.bot.ban_chat_member(chat_id, user_id)
         await update.message.reply_text(f"{target}, you have been banned for {duration} from this group!")
@@ -241,26 +229,15 @@ async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
         await update.message.reply_text("Usage: /unban <user>")
         return
     target = context.args[0]
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     try:
         await context.bot.unban_chat_member(chat_id, user_id)
         await update.message.reply_text(f"{target} has been unbanned.")
@@ -269,7 +246,7 @@ async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def tempban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if len(context.args) < 2:
         await update.message.reply_text("Usage: /tempban <user> <duration>")
@@ -280,30 +257,19 @@ async def tempban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not td:
         await update.message.reply_text("Invalid duration. Use: 1 day, 2 weeks, etc.")
         return
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     until = datetime.now() + td
     try:
-        await context.bot.ban_chat_member(chat_id, user_id, until_date=until)
+        await context.bot.ban_chat_member(chat_id, user_id, until_date=int(until.timestamp()))
         await update.message.reply_text(f"{target} banned until {until.strftime('%Y-%m-%d %H:%M')}")
     except Exception as e:
         await update.message.reply_text(f"Failed to tempban: {e}")
 
 async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if len(context.args) < 2:
         await update.message.reply_text("Usage: /mute <user> <duration>")
@@ -314,50 +280,29 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not td:
         await update.message.reply_text("Invalid duration. Use: 10 minutes, 1 day, etc.")
         return
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     until = datetime.now() + td
     try:
-        await context.bot.restrict_chat_member(chat_id, user_id, until_date=until, can_send_messages=False)
+        await context.bot.restrict_chat_member(chat_id, user_id, until_date=int(until.timestamp()), can_send_messages=False)
         await update.message.reply_text(f"{target} muted until {until.strftime('%Y-%m-%d %H:%M')}")
     except Exception as e:
         await update.message.reply_text(f"Failed to mute: {e}")
 
 async def unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
         await update.message.reply_text("Usage: /unmute <user>")
         return
     target = context.args[0]
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     try:
+        perms = context.bot.chat_permissions
         await context.bot.restrict_chat_member(
             chat_id, user_id,
             can_send_messages=True,
@@ -372,27 +317,16 @@ async def unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def warning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if len(context.args) < 2:
         await update.message.reply_text("Usage: /warning <user> <reason>")
         return
     target = context.args[0]
     reason = " ".join(context.args[1:])
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     if chat_id not in group_warnings:
         group_warnings[chat_id] = {}
     if user_id not in group_warnings[chat_id]:
@@ -403,33 +337,22 @@ async def warning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if count >= 3:
         until = datetime.now() + timedelta(hours=24)
         try:
-            await context.bot.ban_chat_member(chat_id, user_id, until_date=until)
+            await context.bot.ban_chat_member(chat_id, user_id, until_date=int(until.timestamp()))
             await update.message.reply_text(f"🚨 {target} auto-banned for 24h after 3 warnings.")
         except:
             pass
 
 async def removewarnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
         await update.message.reply_text("Usage: /removewarnings <user>")
         return
     target = context.args[0]
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     if chat_id in group_warnings and user_id in group_warnings[chat_id]:
         del group_warnings[chat_id][user_id]
     await update.message.reply_text(f"🧹 Warnings cleared for {target}.")
@@ -440,19 +363,10 @@ async def checkwarnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_id = user_id
     if context.args:
         target = context.args[0]
-        if target.startswith("@"):
-            try:
-                user = await context.bot.get_chat_member(chat_id, target)
-                target_id = user.user.id
-            except:
-                await update.message.reply_text("User not found.")
-                return
-        else:
-            try:
-                target_id = int(target)
-            except:
-                await update.message.reply_text("Invalid user ID or username.")
-                return
+        resolved = await _resolve_user(chat_id, target, context.bot)
+        if resolved is None:
+            return
+        target_id = resolved
     if chat_id in group_warnings and target_id in group_warnings[chat_id]:
         count = len(group_warnings[chat_id][target_id])
         await update.message.reply_text(f"📋 {target_id} has {count} warning(s).")
@@ -461,27 +375,16 @@ async def checkwarnings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if len(context.args) < 2:
         await update.message.reply_text("Usage: /role <user> <role>")
         return
     target = context.args[0]
     role_name = " ".join(context.args[1:])
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     if chat_id not in group_roles:
         group_roles[chat_id] = {}
     group_roles[chat_id][user_id] = role_name
@@ -489,33 +392,22 @@ async def role(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def removerole(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
         await update.message.reply_text("Usage: /removerole <user>")
         return
     target = context.args[0]
-    user_id = None
-    if target.startswith("@"):
-        try:
-            user = await context.bot.get_chat_member(chat_id, target)
-            user_id = user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            user_id = int(target)
-        except:
-            await update.message.reply_text("Invalid user ID or username.")
-            return
+    user_id = await _resolve_user(chat_id, target, context.bot)
+    if user_id is None:
+        return
     if chat_id in group_roles and user_id in group_roles[chat_id]:
         del group_roles[chat_id][user_id]
     await update.message.reply_text(f"❌ Role removed from {target}.")
 
 async def setautomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
         await update.message.reply_text("Usage: /setautomode <strict|normal|fun>")
@@ -529,7 +421,7 @@ async def setautomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def removeautomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if chat_id in group_automode:
         del group_automode[chat_id]
@@ -537,7 +429,7 @@ async def removeautomode(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def welcomemessage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
         await update.message.reply_text("Usage: /welcomemessage <text>")
@@ -548,7 +440,7 @@ async def welcomemessage(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def leavingmessage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id > 0 or not is_admin(chat_id, update.effective_user.id, context):
+    if chat_id > 0 or not await _is_admin(chat_id, update.effective_user.id, context.bot):
         return
     if not context.args:
         await update.message.reply_text("Usage: /leavingmessage <text>")
@@ -585,20 +477,9 @@ async def tictactoe(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Start a game in private or tag someone in group.")
             return
     opponent = context.args[0]
-    opponent_id = None
-    if opponent.startswith("@"):
-        try:
-            opp_user = await context.bot.get_chat_member(chat_id, opponent)
-            opponent_id = opp_user.user.id
-        except:
-            await update.message.reply_text("User not found.")
-            return
-    else:
-        try:
-            opponent_id = int(opponent)
-        except:
-            await update.message.reply_text("Invalid user.")
-            return
+    opponent_id = await _resolve_user(chat_id, opponent, context.bot)
+    if opponent_id is None:
+        return
     game_id = str(uuid4())
     active_games[game_id] = {
         "players": [user.id, opponent_id],
@@ -643,10 +524,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         symbol = "X" if game["turn"] == 0 else "O"
         game["board"][pos] = symbol
-        # Check win
-        win_patterns = [
-            [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
-        ]
+        win_patterns = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
         winner = None
         for pattern in win_patterns:
             if game["board"][pattern[0]] == game["board"][pattern[1]] == game["board"][pattern[2]] != " ":
@@ -685,9 +563,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id < 0:
         if not group_admin_mode.get(chat_id, False):
             return
-        # Group mode: ignore non-command messages
         return
-    # Private mode: AI chat
     if update.message.text and not update.message.text.startswith("/"):
         await send_gemini_response(update, context, update.message.text)
 
@@ -711,6 +587,32 @@ async def member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = msg.replace("{user}", user.mention_html())
         await context.bot.send_message(chat_id, msg, parse_mode="HTML")
 
+# --- Helper Functions ---
+async def _is_admin(chat_id: int, user_id: int, bot) -> bool:
+    if chat_id > 0:
+        return True
+    try:
+        member = await bot.get_chat_member(chat_id, user_id)
+        return member.status in ["administrator", "creator"]
+    except:
+        return False
+
+async def _resolve_user(chat_id: int, target: str, bot):
+    if target.startswith("@"):
+        try:
+            user = await bot.get_chat_member(chat_id, target)
+            return user.user.id
+        except:
+            await bot.send_message(chat_id, "User not found.")
+            return None
+    else:
+        try:
+            return int(target)
+        except ValueError:
+            await bot.send_message(chat_id, "Invalid user ID or username.")
+            return None
+
+# --- Main ---
 def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
