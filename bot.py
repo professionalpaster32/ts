@@ -4,7 +4,6 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
-import asyncio # <-- ADDED: Need this for async/await execution
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -199,9 +198,6 @@ async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"{target} banned for {duration}.")
     except Exception as e:
         await update.message.reply_text(f"❌ Ban failed: {e}")
-
-# --- Other group commands (unban, mute, etc.) kept minimal for brevity ---
-# They follow the same pattern as `ban` above — check creator, resolve user, act.
 
 async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -551,11 +547,9 @@ async def member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = group_leaving_msg.get(chat_id, "Goodbye {user}!").replace("{user}", user.mention_html())
         await context.bot.send_message(chat_id, msg, parse_mode="HTML")
 
-# CHANGED: 'def main()' to 'async def main():'
-async def main(): 
+def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Private commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("addtogroup", addtogroup))
@@ -566,7 +560,6 @@ async def main():
     app.add_handler(CommandHandler("switchmodel", switchmodel))
     app.add_handler(CommandHandler("instructions", instructions))
 
-    # Group commands
     app.add_handler(CommandHandler("ban", ban))
     app.add_handler(CommandHandler("unban", unban))
     app.add_handler(CommandHandler("mute", mute))
@@ -587,15 +580,13 @@ async def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(ChatMemberHandler(member_handler, ChatMemberHandler.CHAT_MEMBER))
 
-    # Webhook setup for Render
     PORT = int(os.environ.get("PORT", "10000"))
     RENDER_EXTERNAL_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
     if not RENDER_EXTERNAL_URL:
         raise RuntimeError("RENDER_EXTERNAL_URL not set")
     WEBHOOK_URL = f"{RENDER_EXTERNAL_URL}/webhook"
     
-    # CHANGED: Added 'await' to fix RuntimeWarning (line 594)
-    await app.bot.set_webhook(url=WEBHOOK_URL) 
+    app.bot.set_webhook(url=WEBHOOK_URL) 
     
     app.run_webhook(
         listen="0.0.0.0",
@@ -604,6 +595,4 @@ async def main():
     )
 
 if __name__ == "__main__":
-    # CHANGED: Used 'asyncio.run(main())' to execute the async main function
-    asyncio.run(main())
-
+    main()
