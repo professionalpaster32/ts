@@ -1,9 +1,11 @@
+
 import os
 import logging
 import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
+import asyncio # <-- Re-add asyncio
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -586,6 +588,13 @@ def main():
         raise RuntimeError("RENDER_EXTERNAL_URL not set")
     WEBHOOK_URL = f"{RENDER_EXTERNAL_URL}/webhook"
     
+    # Use a separate sync call to the async function to set the webhook once.
+    # This avoids the event loop conflict.
+    async def set_hook():
+        await app.bot.set_webhook(url=WEBHOOK_URL)
+        
+    asyncio.run(set_hook())
+
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
