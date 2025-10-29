@@ -586,8 +586,6 @@ def main():
         raise RuntimeError("RENDER_EXTERNAL_URL not set")
     WEBHOOK_URL = f"{RENDER_EXTERNAL_URL}/webhook"
     
-    app.bot.set_webhook(url=WEBHOOK_URL) 
-    
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
