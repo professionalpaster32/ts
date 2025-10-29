@@ -1,11 +1,10 @@
-
 import os
 import logging
 import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
-import asyncio # <-- Re-add asyncio
+import asyncio # Keep this import
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -549,7 +548,8 @@ async def member_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = group_leaving_msg.get(chat_id, "Goodbye {user}!").replace("{user}", user.mention_html())
         await context.bot.send_message(chat_id, msg, parse_mode="HTML")
 
-def main():
+# CHANGED: Def main to async def main
+async def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -588,13 +588,9 @@ def main():
         raise RuntimeError("RENDER_EXTERNAL_URL not set")
     WEBHOOK_URL = f"{RENDER_EXTERNAL_URL}/webhook"
     
-    # Use a separate sync call to the async function to set the webhook once.
-    # This avoids the event loop conflict.
-    async def set_hook():
-        await app.bot.set_webhook(url=WEBHOOK_URL)
-        
-    asyncio.run(set_hook())
-
+    # CHANGED: Await the set_webhook call
+    await app.bot.set_webhook(url=WEBHOOK_URL) 
+    
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
@@ -602,4 +598,6 @@ def main():
     )
 
 if __name__ == "__main__":
-    main()
+    # CHANGED: Used asyncio.run to execute the async main function
+    asyncio.run(main())
+
